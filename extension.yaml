@@ -1,0 +1,12 @@
+# Netlify extension manifest (#996).
+#
+# The slug is assigned by Netlify when the extension is created in the
+# Netlify UI (a nanoid is appended); replace it here before the first
+# publish. Scopes: the extension reads nothing from the customer's team. It
+# injects one edge function into sites that opt in through their own
+# environment variables, and the function talks only to WebDecoy ingest.
+config:
+  slug: webdecoy-sensor
+  name: WebDecoy Crawler Sensor
+  scopes:
+    site: ["read"]

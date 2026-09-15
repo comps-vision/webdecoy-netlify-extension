@@ -1,0 +1,6 @@
+# The extension is hosted as its own Netlify project; this is that project's
+# build. It produces the buildtime component Netlify runs inside customers'
+# builds to inject the edge function.
+[build]
+command = "npm run build"
+publish = ".ntli/site/static"

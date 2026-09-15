@@ -1,0 +1,25 @@
+{
+  "name": "@webdecoy/netlify-extension",
+  "version": "0.1.0",
+  "private": true,
+  "description": "WebDecoy crawler sensor for Netlify: an injected edge function that reports automated traffic, with no source edit.",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "netlify-extension build -a",
+    "dev": "netlify-extension dev --open",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "build:bundle": "node scripts/bundle.mjs",
+    "gen:agents": "cd ../../pkg && go run ./cmd/export-agent-registry -worker > ../edge/netlify-extension/src/sensor/agents.generated.ts && go run ./cmd/export-agent-registry -golden > ../edge/netlify-extension/test/parity-vectors.generated.json"
+  },
+  "dependencies": {
+    "@netlify/sdk": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.2",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.6.0",
+    "vitest": "^3.0.0"
+  }
+}
