@@ -9,3 +9,5 @@ publish = ".ntli/site/static"
 [functions]
 directory = "src/endpoints"
 node_bundler = "esbuild"
+# The handler reads the extension slug from the manifest at runtime.
+included_files = ["extension.yaml"]
