@@ -6,7 +6,7 @@
 # injects one edge function into sites that opt in through their own
 # environment variables, and the function talks only to WebDecoy ingest.
 config:
-  slug: webdecoy-sensor
+  slug: vfnzrosg-webdecoy-sensor
   name: WebDecoy Crawler Sensor
   scopes:
     site: ["read"]
