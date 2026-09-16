@@ -1,6 +1,11 @@
 # The extension is hosted as its own Netlify project; this is that project's
 # build. It produces the buildtime component Netlify runs inside customers'
-# builds to inject the edge function.
+# builds to inject the edge function, and the API handler function Netlify
+# calls to install the extension on a team (src/endpoints/handler.ts).
 [build]
 command = "npm run build"
 publish = ".ntli/site/static"
+
+[functions]
+directory = "src/endpoints"
+node_bundler = "esbuild"
