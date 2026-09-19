@@ -1,6 +1,8 @@
 import type { NetlifyContext } from './netlify';
 import { classify, isStaticAsset } from './classify';
 import { buildPayload } from './payload';
+import { runGate } from './gate';
+import { BUILD } from './build';
 
 /**
  * The injected edge function (#996).
@@ -19,6 +21,12 @@ import { buildPayload } from './payload';
  * WEBDECOY_SENSOR_KEY (proves to ingest that this is a sensor WebDecoy
  * issued, which is what earns the raw-request scoring profile). Missing
  * variables make the function a no-op rather than an unproven reporter.
+ *
+ * A fourth variable, WEBDECOY_ENFORCEMENT, turns this function into the
+ * clearance gate as well (#1188). Without it nothing below the sensor runs,
+ * so a site that has not opted in behaves exactly as it did: every request is
+ * observed and none is changed. With it, WebDecoy decides whether the site is
+ * monitoring or enforcing; the variable only says the gate may run at all.
  */
 
 const DEFAULT_INGEST = 'https://in.webdecoy.com';
@@ -29,7 +37,16 @@ export interface SensorEnv {
   scannerId: string;
   sensorKey: string;
   ingest: string;
+  /** Whether this site opted into the clearance gate (#1188). */
+  enforcement: boolean;
 }
+
+/**
+ * Values that turn the gate on. Anything else, including an empty string and
+ * a typo, leaves it off: a variable nobody can read the meaning of must not
+ * start changing responses on a customer's site.
+ */
+const ENFORCEMENT_ON = ['on', '1', 'true', 'yes', 'enabled'];
 
 export function readEnv(get: (name: string) => string | undefined): SensorEnv | null {
   const siteKey = (get('WEBDECOY_SITE_KEY') ?? '').trim();
@@ -37,7 +54,8 @@ export function readEnv(get: (name: string) => string | undefined): SensorEnv | 
   const sensorKey = (get('WEBDECOY_SENSOR_KEY') ?? '').trim();
   if (!siteKey || !scannerId || !sensorKey) return null;
   const ingest = (get('WEBDECOY_INGEST') ?? '').trim().replace(/\/+$/, '') || DEFAULT_INGEST;
-  return { siteKey, scannerId, sensorKey, ingest };
+  const enforcement = ENFORCEMENT_ON.includes((get('WEBDECOY_ENFORCEMENT') ?? '').trim().toLowerCase());
+  return { siteKey, scannerId, sensorKey, ingest, enforcement };
 }
 
 /** Sends one beacon. Never throws; never takes longer than the timeout. */
@@ -62,23 +80,35 @@ export function makeHandler(
   getEnv: (name: string) => string | undefined,
   fetcher: typeof fetch = fetch
 ) {
-  return (request: Request, context: NetlifyContext): undefined => {
+  return (request: Request, context: NetlifyContext): undefined | Promise<Response | undefined> => {
+    let env: SensorEnv | null = null;
     try {
-      const env = readEnv(getEnv);
+      env = readEnv(getEnv);
       if (!env) return undefined;
       const url = new URL(request.url);
-      if (isStaticAsset(url.pathname)) return undefined;
-      const verdict = classify(request, url);
-      if (!verdict.send) return undefined;
-      const payload = buildPayload(request, url, env.siteKey, env.scannerId, context, verdict);
-      const beacon = sendBeacon(env, payload, fetcher);
-      if (typeof context.waitUntil === 'function') {
-        context.waitUntil(beacon);
+      if (!isStaticAsset(url.pathname)) {
+        const verdict = classify(request, url);
+        if (verdict.send) {
+          const payload = buildPayload(request, url, env.siteKey, env.scannerId, context, verdict);
+          const beacon = sendBeacon(env, payload, fetcher);
+          if (typeof context.waitUntil === 'function') {
+            context.waitUntil(beacon);
+          }
+        }
       }
     } catch {
       // Same rule: the sensor is never the reason a page failed.
     }
-    return undefined;
+    // Observation first, so a challenged request is reported exactly like one
+    // that passed — the Worker's order.
+    if (!env || !env.enforcement) return undefined;
+    return runGate(request, context, {
+      siteKey: env.siteKey,
+      scannerId: env.scannerId,
+      sensorKey: env.sensorKey,
+      ingest: env.ingest,
+      version: BUILD,
+    });
   };
 }
 

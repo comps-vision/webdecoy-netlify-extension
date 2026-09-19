@@ -1,6 +1,8 @@
 # WebDecoy Netlify extension (#996)
 
-An injected edge function that reports automated traffic on a Netlify site to WebDecoy. Monitoring only; it never changes a response. See `docs/NETLIFY_EXTENSION.md` in the repository root for the spike record, and `details.md` for the customer-facing text.
+An injected edge function that reports automated traffic on a Netlify site to WebDecoy, and — for a site that sets `WEBDECOY_ENFORCEMENT` — is also WebDecoy's clearance validator (#1188). Without that variable it reports and changes no response. See `docs/NETLIFY_EXTENSION.md` in the repository root for the spike record, and `details.md` for the customer-facing text.
+
+The gate is not written here: `src/sensor/gate.ts` composes the Cloudflare Worker's own modules (`decision.ts`, `validator-parts.ts`, `telemetry.ts`) and the AWS validator's reverse-DNS table, which the bundler pulls into the single injected file. A change to any of those re-runs this package's CI.
 
 ```
 npm ci

@@ -69,16 +69,27 @@ describe('publish-details', () => {
 });
 
 describe('details.md', () => {
-  it('says what the extension does and what it never does', () => {
+  it('says what the extension does, and what it does not do unless asked', () => {
     expect(details).toMatch(/^# WebDecoy Crawler Sensor$/m);
-    expect(details).toContain('## What it never does');
+    expect(details).toContain('## What it never does without you');
     expect(details).toContain('never blocks');
+    // It must not promise monitoring-only now that a site can opt into the
+    // gate, and it must not promise the gate to a site that has not (#1188).
+    expect(details).not.toMatch(/monitoring only/i);
+    expect(details).toContain('WEBDECOY_ENFORCEMENT');
+    expect(details).toContain('off unless you add a fourth variable');
   });
 
   it.skipIf(!existsSync(docsPage))('names the same environment variables as the docs page', () => {
     const names = (text: string) => [...new Set(text.match(/WEBDECOY_[A-Z_]+/g) ?? [])].sort();
     expect(names(details)).toEqual(names(readFileSync(docsPage, 'utf8')));
-    expect(names(details)).toEqual(['WEBDECOY_SCANNER_ID', 'WEBDECOY_SENSOR_KEY', 'WEBDECOY_SITE_KEY']);
+    // The three the sensor needs, and the one that turns the gate on (#1188).
+    expect(names(details)).toEqual([
+      'WEBDECOY_ENFORCEMENT',
+      'WEBDECOY_SCANNER_ID',
+      'WEBDECOY_SENSOR_KEY',
+      'WEBDECOY_SITE_KEY',
+    ]);
   });
 
   it('has no em-dashes (customer-facing copy)', () => {

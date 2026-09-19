@@ -6,9 +6,9 @@ Reports the automated traffic on your Netlify site to WebDecoy, with no change t
 
 Requests whose user agent names a known crawler or tool, requests with no user agent, requests for crawler-only paths such as `/robots.txt`, and browsers missing headers real browsers send. Static assets are skipped. Human visitors with ordinary browsers are never reported.
 
-## What it never does
+## What it never does without you
 
-**Monitoring only.** It never blocks, redirects, challenges or slows a request, and a reporting failure never affects your visitors. It does not read request bodies or cookie values. Installing the extension changes nothing on any site: a site gets the sensor only after you set the variables below on that site.
+As set up below it never blocks, redirects, challenges or slows a request, and a reporting failure never affects your visitors. It does not read request bodies or cookie values. Installing the extension changes nothing on any site: a site gets the sensor only after you set the variables below on that site.
 
 ## Setup
 
@@ -29,6 +29,18 @@ To prove it end to end, request any page with the user agent `WebDecoy-Test/1.0`
 ## What it costs
 
 Every non-asset request invokes the edge function, which counts as an edge function invocation on your Netlify plan. The function does no network work before your response is sent.
+
+## Enforcement, when you want it
+
+The same function can also be WebDecoy's clearance validator, which asks a request with no clearance to verify before it reaches a protected path. It is off unless you add a fourth variable to a site:
+
+| Variable | Value |
+|---|---|
+| `WEBDECOY_ENFORCEMENT` | `on` |
+
+Deploy again and that site's next build carries it. Whether requests are watched or refused is then your setting in WebDecoy, per site. Sites without the variable are unaffected: they report, and change nothing.
+
+On Netlify the validator verifies search engines itself, by forward-confirmed reverse DNS, and accepts bots that sign their requests. Your framework's middleware runs before it, so a request your middleware answers itself is not gated.
 
 ## Remove
 

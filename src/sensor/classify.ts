@@ -74,6 +74,20 @@ export function classify(request: Request, url: URL): SensorVerdict {
   return { send: flags.length > 0, flags, ai };
 }
 
+/**
+ * Whether the request says it is a crawler (#1187).
+ *
+ * The same test the classifier's `known_crawler_ua` flag makes, named so the
+ * gate can ask it before paying for a DNS lookup: a client that does not
+ * claim to be a crawler is not one we would verify anyway, and a real search
+ * engine always says who it is.
+ */
+export function claimsCrawler(rawUA: string): boolean {
+  const ua = rawUA.toLowerCase();
+  const agent = matchAgent(ua);
+  return agent?.kind === 'crawler' || (!agent && GENERIC_BOT.test(rawUA));
+}
+
 /** Static assets are never reported: a page load would otherwise become forty beacons. */
 const STATIC_ASSET = /\.(?:js|mjs|css|map|png|jpe?g|gif|webp|avif|svg|ico|woff2?|ttf|otf|eot|mp4|webm|mp3|pdf|txt|json|xml)$/i;
 const STATIC_PREFIX = /^\/(?:_next\/static\/|_astro\/|assets\/|static\/|\.netlify\/)/;

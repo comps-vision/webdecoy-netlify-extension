@@ -236,6 +236,11 @@ function classify(request, url) {
   }
   return { send: flags.length > 0, flags, ai };
 }
+function claimsCrawler(rawUA) {
+  const ua = rawUA.toLowerCase();
+  const agent = matchAgent(ua);
+  return agent?.kind === "crawler" || !agent && GENERIC_BOT.test(rawUA);
+}
 var STATIC_ASSET = /\.(?:js|mjs|css|map|png|jpe?g|gif|webp|avif|svg|ico|woff2?|ttf|otf|eot|mp4|webm|mp3|pdf|txt|json|xml)$/i;
 var STATIC_PREFIX = /^\/(?:_next\/static\/|_astro\/|assets\/|static\/|\.netlify\/)/;
 function isStaticAsset(pathname) {
@@ -290,16 +295,1344 @@ function buildPayload(request, url, siteKey, scannerId, context, v) {
   };
 }
 
+// ../clearance-worker/src/web-bot-auth.ts
+var TAG = "web-bot-auth";
+async function verifyWebBotAuth(request, signedAgents) {
+  const sigInput = request.headers.get("signature-input");
+  const sigHeader = request.headers.get("signature");
+  if (!sigInput && !sigHeader) return { status: "none" };
+  if (!sigInput || !sigHeader) return { status: "invalid" };
+  if (!signedAgents || signedAgents.length === 0) {
+    return { status: "unknown_key" };
+  }
+  let members;
+  let sigs;
+  try {
+    members = parseSignatureInput(sigInput);
+    sigs = parseSignature(sigHeader);
+  } catch {
+    return { status: "invalid" };
+  }
+  let sawWebBotAuth = false;
+  let sawKnownKey = false;
+  for (const m of members) {
+    if (m.params.get("tag") !== TAG) continue;
+    sawWebBotAuth = true;
+    const sig = sigs.get(m.label);
+    if (!sig) continue;
+    const keyid = m.params.get("keyid");
+    if (typeof keyid !== "string") continue;
+    let agentDirectory;
+    try {
+      agentDirectory = signatureAgentDirectory(request, m);
+    } catch {
+      sawKnownKey ||= signedAgents.some((k) => k.keyid === keyid);
+      continue;
+    }
+    const key = signedAgents.find((k) => {
+      if (k.keyid !== keyid) return false;
+      try {
+        return normalizeDirectory(k.directory) === agentDirectory;
+      } catch {
+        return false;
+      }
+    });
+    if (!key) continue;
+    sawKnownKey = true;
+    const now = Date.now() / 1e3;
+    const created = m.params.get("created");
+    const expires = m.params.get("expires");
+    if (typeof created !== "number" || typeof expires !== "number") continue;
+    if (now >= expires + 10 || now + 10 < created) continue;
+    if (expires <= created || expires - created > 24 * 60 * 60) continue;
+    if (!m.components.some((c) => c.name === "@authority" || c.name === "@target-uri")) continue;
+    let base;
+    try {
+      base = buildSignatureBase(request, m);
+    } catch {
+      continue;
+    }
+    let ok = false;
+    try {
+      const pub = await crypto.subtle.importKey(
+        "raw",
+        b64stdToBytes(key.public_key),
+        { name: "Ed25519" },
+        false,
+        ["verify"]
+      );
+      ok = await crypto.subtle.verify({ name: "Ed25519" }, pub, sig, new TextEncoder().encode(base));
+    } catch {
+      ok = false;
+    }
+    if (ok) {
+      return { status: "verified", name: key.name, category: key.category, keyid };
+    }
+  }
+  if (sawKnownKey) return { status: "invalid" };
+  return sawWebBotAuth ? { status: "unknown_key" } : { status: "none" };
+}
+function signatureAgentDirectory(request, m) {
+  const header = request.headers.get("signature-agent");
+  if (header === null) throw new Error("missing signature-agent");
+  const component = m.components.find((c) => c.name.toLowerCase() === "signature-agent");
+  if (!component) throw new Error("signature-agent is not covered");
+  const trimmed = header.trim();
+  let uri;
+  if (trimmed.startsWith('"')) {
+    if (component.keyParam !== void 0) throw new Error("legacy string cannot select a member");
+    const p = new Parser(trimmed);
+    uri = parseString(p);
+    p.skipSP();
+    if (!p.eof()) throw new Error("trailing signature-agent data");
+  } else {
+    if (component.keyParam === void 0) throw new Error("dictionary member is not covered");
+    const member = parseDictionary(trimmed).find((d) => d.key === component.keyParam);
+    const value = member?.items[0]?.value;
+    if (!member || member.isList || member.items.length !== 1 || typeof value !== "string") {
+      throw new Error("signature-agent member is not a string");
+    }
+    uri = value;
+  }
+  return normalizeDirectory(uri);
+}
+function normalizeDirectory(raw) {
+  const url = new URL(raw);
+  if (url.protocol !== "https:" || !url.hostname || url.username || url.password) {
+    throw new Error("signature-agent must be an https URL");
+  }
+  return `https://${canonicalAuthority(url)}`;
+}
+function buildSignatureBase(request, m) {
+  const url = new URL(request.url);
+  const lines = [];
+  for (const c of m.components) {
+    lines.push(`${serializeComponentId(c)}: ${componentValue(request, url, c)}`);
+  }
+  lines.push(`"@signature-params": ${m.raw.trim()}`);
+  return lines.join("\n");
+}
+function serializeComponentId(c) {
+  const base = `"${c.name.toLowerCase()}"`;
+  return c.keyParam !== void 0 ? `${base};key="${c.keyParam}"` : base;
+}
+function componentValue(request, url, c) {
+  const name = c.name.toLowerCase();
+  if (name === "@authority") return canonicalAuthority(url);
+  if (name === "@target-uri") {
+    return `${url.protocol}//${canonicalAuthority(url)}${url.pathname}${url.search}`;
+  }
+  if (name === "signature-agent") {
+    const header = request.headers.get("signature-agent");
+    if (header === null) throw new Error("signature-agent covered but absent");
+    if (c.keyParam !== void 0) return dictMemberValue(header, c.keyParam);
+    return header.trim().replace(/\s+/g, " ");
+  }
+  throw new Error(`unsupported covered component ${name}`);
+}
+function canonicalAuthority(url) {
+  const host = url.hostname.toLowerCase();
+  const port = url.port;
+  if (!port) return host;
+  if (url.protocol === "https:" && port === "443" || url.protocol === "http:" && port === "80") {
+    return host;
+  }
+  return `${host}:${port}`;
+}
+function dictMemberValue(header, key) {
+  const dict = parseDictionary(header);
+  const found = dict.find((d) => d.key === key);
+  if (!found) throw new Error(`signature-agent has no member ${key}`);
+  return found.raw;
+}
+function parseSignatureInput(value) {
+  const dict = parseDictionary(value);
+  return dict.map((d) => {
+    if (!d.isList) throw new Error(`Signature-Input member ${d.key} is not an inner list`);
+    const components = d.items.map((it) => {
+      if (typeof it.value !== "string") throw new Error("component identifier is not a string");
+      const keyParam = it.params.get("key");
+      return { name: it.value, keyParam: typeof keyParam === "string" ? keyParam : void 0 };
+    });
+    return { label: d.key, components, params: d.params, raw: d.raw };
+  });
+}
+function parseSignature(value) {
+  const dict = parseDictionary(value);
+  const out = /* @__PURE__ */ new Map();
+  for (const d of dict) {
+    if (d.isList || d.items.length !== 1) throw new Error(`Signature member ${d.key} is not a byte sequence`);
+    const bytes = d.items[0].bytes;
+    if (!bytes) throw new Error(`Signature member ${d.key} is not a byte sequence`);
+    out.set(d.key, bytes);
+  }
+  return out;
+}
+var Parser = class {
+  constructor(s, i = 0) {
+    this.s = s;
+    this.i = i;
+  }
+  eof() {
+    return this.i >= this.s.length;
+  }
+  peek() {
+    return this.s[this.i];
+  }
+  skipSP() {
+    while (!this.eof() && (this.peek() === " " || this.peek() === "	")) this.i++;
+  }
+};
+function parseDictionary(input) {
+  const p = new Parser(input);
+  const out = [];
+  p.skipSP();
+  while (!p.eof()) {
+    const key = parseKey(p);
+    const entry = { key, raw: "", isList: false, items: [], params: /* @__PURE__ */ new Map() };
+    if (!p.eof() && p.peek() === "=") {
+      p.i++;
+      const start = p.i;
+      if (!p.eof() && p.peek() === "(") {
+        entry.isList = true;
+        parseInnerList(p, entry);
+      } else {
+        const { value, params, bytes } = parseItem(p);
+        entry.items.push({ value, params, ...bytes ? { bytes } : {} });
+      }
+      entry.raw = input.slice(start, p.i);
+    } else {
+      entry.params = parseParams(p);
+      entry.items.push({ value: true, params: /* @__PURE__ */ new Map() });
+    }
+    out.push(entry);
+    p.skipSP();
+    if (p.eof()) break;
+    if (p.peek() !== ",") throw new Error(`expected ',' at ${p.i}`);
+    p.i++;
+    p.skipSP();
+    if (p.eof()) throw new Error("trailing comma");
+  }
+  return out;
+}
+function parseInnerList(p, entry) {
+  p.i++;
+  for (; ; ) {
+    p.skipSP();
+    if (p.eof()) throw new Error("unterminated inner list");
+    if (p.peek() === ")") {
+      p.i++;
+      break;
+    }
+    const { value, params } = parseItem(p);
+    entry.items.push({ value, params });
+    if (p.eof()) throw new Error("unterminated inner list");
+    const c = p.peek();
+    if (c !== " " && c !== ")") throw new Error(`bad inner list at ${p.i}`);
+  }
+  entry.params = parseParams(p);
+}
+function parseItem(p) {
+  const { value, bytes } = parseBareItem(p);
+  const params = parseParams(p);
+  return { value, params, bytes };
+}
+function parseParams(p) {
+  const params = /* @__PURE__ */ new Map();
+  while (!p.eof() && p.peek() === ";") {
+    p.i++;
+    p.skipSP();
+    const key = parseKey(p);
+    let val = true;
+    if (!p.eof() && p.peek() === "=") {
+      p.i++;
+      const r = parseBareItem(p);
+      val = typeof r.value === "boolean" ? r.value : r.value;
+    }
+    if (typeof val !== "boolean") params.set(key, val);
+  }
+  return params;
+}
+function parseKey(p) {
+  const c = p.peek();
+  if (!c || !/[a-z*]/.test(c)) throw new Error(`invalid key at ${p.i}`);
+  const start = p.i;
+  while (!p.eof() && /[a-z0-9_\-.*]/.test(p.peek())) p.i++;
+  return p.s.slice(start, p.i);
+}
+function parseBareItem(p) {
+  const c = p.peek();
+  if (c === '"') return { value: parseString(p) };
+  if (c === ":") {
+    const bytes = parseByteSequence(p);
+    return { value: "", bytes };
+  }
+  if (c === "?") {
+    p.i++;
+    const b = p.peek();
+    p.i++;
+    if (b === "1") return { value: true };
+    if (b === "0") return { value: false };
+    throw new Error("bad boolean");
+  }
+  if (c === "-" || /[0-9]/.test(c)) return { value: parseNumber(p) };
+  if (/[a-zA-Z*]/.test(c)) return { value: parseToken(p) };
+  throw new Error(`invalid bare item at ${p.i}`);
+}
+function parseString(p) {
+  p.i++;
+  let out = "";
+  while (!p.eof()) {
+    const c = p.s[p.i++];
+    if (c === '"') return out;
+    if (c === "\\") {
+      const e = p.s[p.i++];
+      if (e !== '"' && e !== "\\") throw new Error("bad escape");
+      out += e;
+    } else {
+      const code = c.charCodeAt(0);
+      if (code < 32 || code > 126) throw new Error("bad char in string");
+      out += c;
+    }
+  }
+  throw new Error("unterminated string");
+}
+function parseByteSequence(p) {
+  p.i++;
+  const start = p.i;
+  while (!p.eof() && p.peek() !== ":") p.i++;
+  if (p.eof()) throw new Error("unterminated byte sequence");
+  const b64 = p.s.slice(start, p.i);
+  p.i++;
+  return b64stdToBytes(b64);
+}
+function parseNumber(p) {
+  const start = p.i;
+  if (p.peek() === "-") p.i++;
+  while (!p.eof() && /[0-9]/.test(p.peek())) p.i++;
+  if (!p.eof() && p.peek() === ".") {
+    p.i++;
+    while (!p.eof() && /[0-9]/.test(p.peek())) p.i++;
+  }
+  return Number(p.s.slice(start, p.i));
+}
+function parseToken(p) {
+  const start = p.i;
+  p.i++;
+  while (!p.eof() && /[a-zA-Z0-9!#$%&'*+\-.^_`|~:/]/.test(p.peek())) p.i++;
+  return p.s.slice(start, p.i);
+}
+function b64stdToBytes(s) {
+  const bin = atob(s);
+  const out = new Uint8Array(new ArrayBuffer(bin.length));
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+function isAgentCategoryAllowed(category, allow) {
+  if (category === "ai_crawlers") return allow.ai_crawlers;
+  if (category === "search_engines") return allow.search_engines;
+  if (category === "monitoring") return allow.monitoring;
+  return false;
+}
+
+// ../clearance-worker/src/route-resolution.ts
+var TRUST_RANK = {
+  "attested-human": 2,
+  "human-likely": 1,
+  clean: 0
+};
+function rank(grade2) {
+  return TRUST_RANK[grade2 ?? ""] ?? 0;
+}
+function grade(r) {
+  return r > 0 ? Object.keys(TRUST_RANK).find((g) => TRUST_RANK[g] === r) ?? "" : "";
+}
+function patternMatches(path, pattern) {
+  if (pattern.endsWith("/*")) {
+    const base = pattern.slice(0, -2);
+    if (base === "") return true;
+    return path === base || path.startsWith(base + "/");
+  }
+  return path === pattern;
+}
+function specificity(pattern) {
+  return pattern.endsWith("/*") ? pattern.length - 2 : 1 << 20;
+}
+function resolveRoute(path, rules, siteMode) {
+  const strictest = /* @__PURE__ */ new Map();
+  const enforcing = /* @__PURE__ */ new Set();
+  const covering = [];
+  const excepting = [];
+  for (const r of rules) {
+    if (!patternMatches(path, r.pattern)) continue;
+    if ((r.exceptions ?? []).some((e) => patternMatches(path, e))) {
+      excepting.push(r.pattern);
+      continue;
+    }
+    const seen = strictest.get(r.pattern);
+    if (seen === void 0) covering.push(r.pattern);
+    const tr = rank(r.min_trust);
+    if (seen === void 0 || tr > seen) strictest.set(r.pattern, tr);
+    if (r.mode !== "monitor") enforcing.add(r.pattern);
+  }
+  const previews = [];
+  if (covering.length === 0) {
+    let exceptedBy = "";
+    for (const p of excepting) {
+      if (exceptedBy === "" || specificity(p) > specificity(exceptedBy)) exceptedBy = p;
+    }
+    return {
+      covering,
+      deciding_mode: "",
+      attributed: "",
+      required_trust: "",
+      requirement_source: "",
+      previews,
+      excepted_by: exceptedBy
+    };
+  }
+  covering.sort((a, b) => specificity(b) - specificity(a));
+  const siteMonitors = siteMode === "monitor";
+  let deciding = covering.filter((p) => enforcing.has(p));
+  let decidingMode = siteMonitors ? "monitor" : "enforce";
+  if (deciding.length === 0) {
+    if (!siteMonitors) {
+      for (const p of covering) previews.push({ pattern: p, required_trust: grade(strictest.get(p) ?? 0) });
+    }
+    deciding = covering;
+    decidingMode = "monitor";
+  }
+  let best = 0;
+  let source = "";
+  for (const p of deciding) {
+    const r = strictest.get(p) ?? 0;
+    if (r > best) {
+      best = r;
+      source = p;
+    }
+  }
+  if (decidingMode === "enforce") {
+    for (const p of covering) {
+      if (enforcing.has(p)) continue;
+      previews.push({ pattern: p, required_trust: grade(Math.max(best, strictest.get(p) ?? 0)) });
+    }
+  }
+  return {
+    covering,
+    deciding_mode: decidingMode,
+    attributed: deciding[0],
+    required_trust: grade(best),
+    requirement_source: source,
+    previews,
+    excepted_by: ""
+  };
+}
+
+// ../clearance-worker/src/bot-behaviors.ts
+var BOT_BEHAVIOR_OTHER = "other";
+var BEHAVIOR_BY_CATEGORY = {
+  "search engine crawler": "search",
+  "ai search": "search",
+  "ai assistant": "agent",
+  "ai crawler": "training",
+  "page preview": "link_preview",
+  "feed fetcher": "feeds",
+  "monitoring & analytics": "monitoring",
+  "search engine optimization": "seo",
+  security: "security_testing"
+};
+function behaviorForCategory(category) {
+  const c = category.trim().toLowerCase();
+  if (!c) return "";
+  return BEHAVIOR_BY_CATEGORY[c] ?? BOT_BEHAVIOR_OTHER;
+}
+function behaviorAllowsCategory(category, behaviors) {
+  const behavior = behaviorForCategory(category);
+  return behavior !== "" && behaviors.includes(behavior);
+}
+var LEGACY_CATEGORIES = {
+  search_engines: ["search engine crawler"],
+  ai_crawlers: ["ai assistant", "ai crawler", "ai search"],
+  monitoring: ["monitoring & analytics"]
+};
+function legacyKeyAllowedByBehaviors(key, behaviors) {
+  const categories = LEGACY_CATEGORIES[key];
+  if (!categories) return false;
+  return categories.every((c) => behaviorAllowsCategory(c, behaviors));
+}
+
+// ../clearance-worker/src/credential-reach.ts
+function matchesReachPath(path, pattern) {
+  if (pattern.endsWith("/*")) {
+    const base = pattern.slice(0, -2);
+    if (base === "") return true;
+    return path === base || path.startsWith(base + "/");
+  }
+  return path === pattern;
+}
+function credentialGrants(here, paths, path) {
+  if (!here) return false;
+  if (!paths) return true;
+  return paths.some((p) => matchesReachPath(path, p));
+}
+
+// ../clearance-worker/src/decision.ts
+var SERVICE_TOKEN_HEADER = "x-wd-service-token";
+var CLEARANCE_COOKIE = "wd_clearance";
+function decide(gate2, need) {
+  if (gate2.graded && need && !meetsTrust(gate2.graded.trust, need)) {
+    return { pass: false, label: "insufficient-trust" };
+  }
+  return { pass: gate2.pass, label: gate2.label };
+}
+async function evaluate(request, config2, platform) {
+  const path = new URL(request.url).pathname;
+  const route = resolveRoute(path, routeRules(config2), config2.mode);
+  const mode = route.deciding_mode || config2.mode;
+  const found = await gate(request, config2, platform, route.covering.length > 0, route.excepted_by !== "");
+  const behavior = found.behavior ?? "";
+  const actual = decide(found, route.required_trust);
+  const pattern = actual.label === "excepted" ? route.excepted_by : actual.label === "unscoped" ? "" : route.attributed;
+  const refusedNow = !actual.pass && mode === "enforce";
+  const previews = route.previews.map((c) => {
+    const promoted = decide(found, c.required_trust);
+    return { pattern: c.pattern, refused: !promoted.pass && !refusedNow ? promoted.label : "" };
+  });
+  return {
+    pass: actual.pass,
+    label: actual.label,
+    pattern,
+    mode,
+    previews,
+    behavior,
+    outsideReach: found.outsideReach ?? ""
+  };
+}
+async function gate(request, config2, platform, covered, excepted) {
+  const presented = await machineCredential(request, config2, platform);
+  if (presented.grants) {
+    return { pass: true, label: "machine" };
+  }
+  const rest = await gateChecks(request, config2, platform, covered, excepted);
+  return presented.outsideReach ? { ...rest, outsideReach: presented.outsideReach } : rest;
+}
+async function machineCredential(request, config2, platform) {
+  const serviceToken = request.headers.get(SERVICE_TOKEN_HEADER);
+  if (!serviceToken) return { grants: false, outsideReach: "" };
+  const claims = await verifyToken(serviceToken, config2.keys, platform.siteKey);
+  if (!claims || claims.typ !== "machine" || !claims.sub) return { grants: false, outsideReach: "" };
+  if (config2.active_credentials.includes(claims.sub)) {
+    return { grants: true, outsideReach: "" };
+  }
+  const restricted = (config2.restricted_credentials ?? []).find((c) => c && c.id === claims.sub);
+  if (!restricted) return { grants: false, outsideReach: "" };
+  const path = new URL(request.url).pathname;
+  if (credentialGrants(restricted.here, restricted.paths, path)) {
+    return { grants: true, outsideReach: "" };
+  }
+  return { grants: false, outsideReach: claims.sub };
+}
+async function gateChecks(request, config2, platform, covered, excepted) {
+  const botCategory = await platform.verifiedBotCategory(request, covered) || "";
+  if (botCategory && exemptsCategory(botCategory, config2)) {
+    return { pass: true, label: "verified-bot", behavior: behaviorForCategory(botCategory) };
+  }
+  const agent = await verifyWebBotAuth(request, config2.signed_agents);
+  if (agent.status === "verified" && exemptsAgent(agent.category, config2)) {
+    return { pass: true, label: "signed-agent", behavior: agentBehavior(agent.category) };
+  }
+  if (agent.status === "invalid") {
+    if (covered) {
+      return { pass: false, label: "agent-impersonation" };
+    }
+  }
+  if (!covered) {
+    if (excepted) {
+      return { pass: true, label: "excepted" };
+    }
+    return { pass: true, label: "unscoped" };
+  }
+  const token = readCookie(request.headers.get("cookie") ?? "", CLEARANCE_COOKIE);
+  if (!token) {
+    return { pass: false, label: "missing" };
+  }
+  const claims = await verifyToken(token, config2.keys, platform.siteKey);
+  if (!claims || (claims.typ ?? "") !== "") {
+    return { pass: false, label: "invalid" };
+  }
+  if (config2.denied_fps && config2.denied_fps.includes(claims.fp)) {
+    return { pass: false, label: "revoked" };
+  }
+  return { pass: true, label: "valid", graded: { trust: claims.trust } };
+}
+function routeRules(config2) {
+  const refusing = new Set(config2.routes);
+  const except = /* @__PURE__ */ new Map();
+  for (const e of config2.route_exceptions ?? []) {
+    if (refusing.has(e.pattern) && Array.isArray(e.except)) except.set(e.pattern, e.except);
+  }
+  const rules = config2.routes.map((p) => ({ pattern: p, exceptions: except.get(p) }));
+  for (const e of config2.route_min_trust ?? []) {
+    if (refusing.has(e.pattern))
+      rules.push({ pattern: e.pattern, min_trust: e.min_trust, exceptions: except.get(e.pattern) });
+  }
+  for (const e of config2.monitor_routes ?? []) {
+    rules.push({ pattern: e.pattern, min_trust: e.min_trust, mode: "monitor", exceptions: e.except });
+  }
+  return rules;
+}
+var TRUST_RANK2 = {
+  "attested-human": 2,
+  "human-likely": 1,
+  clean: 0
+};
+function trustRank(level) {
+  return TRUST_RANK2[level ?? ""] ?? 0;
+}
+function meetsTrust(have, need) {
+  return trustRank(have) >= trustRank(need);
+}
+function exemptsCategory(category, config2) {
+  const behaviors = config2.allow_behaviors;
+  if (behaviors) return behaviorAllowsCategory(category, behaviors);
+  return isAllowedBotCategory(category, config2.allow);
+}
+function exemptsAgent(category, config2) {
+  const behaviors = config2.allow_behaviors;
+  if (behaviors) return legacyKeyAllowedByBehaviors(category, behaviors);
+  return isAgentCategoryAllowed(category, config2.allow);
+}
+function agentBehavior(category) {
+  if (category === "search_engines") return "search";
+  if (category === "monitoring") return "monitoring";
+  return "";
+}
+function isAllowedBotCategory(category, allow) {
+  const c = category.trim().toLowerCase();
+  if (allow.search_engines && c.includes("search engine crawler")) return true;
+  if (allow.ai_crawlers && c.startsWith("ai ")) return true;
+  if (allow.monitoring && c.includes("monitoring")) return true;
+  return false;
+}
+function readCookie(header, name) {
+  for (const part of header.split(";")) {
+    const eq = part.indexOf("=");
+    if (eq < 0) continue;
+    if (part.slice(0, eq).trim() === name) {
+      return part.slice(eq + 1).trim() || null;
+    }
+  }
+  return null;
+}
+async function verifyToken(token, keys, tenant) {
+  try {
+    const dot = token.indexOf(".");
+    if (dot < 0) return null;
+    const payload = b64urlDecode(token.slice(0, dot));
+    const sig = b64urlDecode(token.slice(dot + 1));
+    const claims = JSON.parse(new TextDecoder().decode(payload));
+    const key = keys.find((k) => k.kid === claims.kid);
+    if (!key) return null;
+    const pub = await crypto.subtle.importKey(
+      "raw",
+      b64stdDecode(key.public_key),
+      { name: "Ed25519" },
+      false,
+      ["verify"]
+    );
+    const ok = await crypto.subtle.verify({ name: "Ed25519" }, pub, sig, payload);
+    if (!ok) return null;
+    if (claims.tenant !== tenant) return null;
+    if (Date.now() / 1e3 >= claims.exp) return null;
+    return claims;
+  } catch {
+    return null;
+  }
+}
+function b64urlDecode(s) {
+  const b64 = s.replace(/-/g, "+").replace(/_/g, "/") + "=".repeat((4 - s.length % 4) % 4);
+  return bytesOf(atob(b64));
+}
+function b64stdDecode(s) {
+  return bytesOf(atob(s));
+}
+function bytesOf(bin) {
+  const out = new Uint8Array(new ArrayBuffer(bin.length));
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
+// ../clearance-worker/src/device-fp.ts
+var FP_VERSION = "wdfp1";
+var DEVICE_FP_JS = `
+async function wdDeviceFP() {
+  // Canvas: 32-bit rolling hash of the dataURL, matching
+  // EnvironmentalCollector._getCanvasHash in @webdecoy/client. The drawing
+  // parameters below are part of the fingerprint \u2014 changing any of them
+  // changes every fingerprint.
+  var canvas32 = 'na';
+  try {
+    var c = document.createElement('canvas');
+    c.width = 200; c.height = 50;
+    var x = c.getContext('2d');
+    x.textBaseline = 'top'; x.font = '14px Arial';
+    x.fillStyle = '#f60'; x.fillRect(125, 1, 62, 20);
+    x.fillStyle = '#069'; x.fillText('FCaptcha', 2, 15);
+    x.fillStyle = 'rgba(102, 204, 0, 0.7)'; x.fillText('FCaptcha', 4, 17);
+    var dataUrl = c.toDataURL();
+    var h = 0;
+    for (var i = 0; i < dataUrl.length; i++) { h = ((h << 5) - h) + dataUrl.charCodeAt(i); h = h & h; }
+    canvas32 = h.toString(16);
+  } catch (e) { canvas32 = 'na'; }
+
+  var webgl = 'na';
+  try {
+    var gc = document.createElement('canvas');
+    var gl = gc.getContext('webgl') || gc.getContext('experimental-webgl');
+    if (gl) {
+      var dbg = gl.getExtension('WEBGL_debug_renderer_info');
+      var vendor = dbg ? gl.getParameter(dbg.UNMASKED_VENDOR_WEBGL) : 'unknown';
+      var renderer = dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : 'unknown';
+      webgl = String(renderer) + '~' + String(vendor);
+    }
+  } catch (e) { webgl = 'na'; }
+
+  var tz = 'na';
+  try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'na'; } catch (e) {}
+
+  var raw = ['${FP_VERSION}', canvas32, webgl,
+    screen.width + 'x' + screen.height + 'x' + screen.colorDepth,
+    tz, navigator.platform || 'na', navigator.language || 'na'
+  ].join('|');
+  var buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(raw));
+  var fp = Array.from(new Uint8Array(buf)).map(function (b) {
+    return b.toString(16).padStart(2, '0');
+  }).join('');
+
+  return { fp: fp, canvas32: canvas32, webgl: webgl };
+}
+`;
+
+// ../clearance-worker/src/validator-parts.ts
+var CONFIG_TTL_MS = 6e4;
+var VERDICT_HEADER = "x-wd-clearance";
+var CLASS_HEADER = "x-wd-class";
+var HEALTHCHECK_PARAM = "__wd_clearance_check";
+var PAT_PATH = "/.well-known/wd-clearance/pat";
+var configCache = /* @__PURE__ */ new Map();
+var MAX_CACHED_CONFIGS = 16;
+async function getConfig(env, host) {
+  const now = Date.now();
+  const key = host;
+  const cached = configCache.get(key);
+  if (cached && now - cached.at < CONFIG_TTL_MS) {
+    return cached.config;
+  }
+  try {
+    let url = `${env.apiBase}/api/v1/clearance/config?aid=${encodeURIComponent(env.siteKey)}`;
+    if (env.propertyId) {
+      url += `&pid=${encodeURIComponent(env.propertyId)}`;
+    }
+    if (host) {
+      url += `&host=${encodeURIComponent(host)}`;
+    }
+    const res = await fetch(url, { signal: AbortSignal.timeout(3e3) });
+    if (!res.ok) {
+      return cached?.config ?? null;
+    }
+    const config2 = await res.json();
+    configCache.set(key, { config: config2, at: now });
+    if (configCache.size > MAX_CACHED_CONFIGS) {
+      const oldest = configCache.keys().next();
+      if (!oldest.done) configCache.delete(oldest.value);
+    }
+    return config2;
+  } catch {
+    return cached?.config ?? null;
+  }
+}
+function healthResponse(nonce, mode, siteKey, capabilities) {
+  return new Response(
+    // capabilities (#1124) is for display during setup only. It is fetched
+    // unauthenticated from the owner's browser, so support states never rest
+    // on it; they come from verified reports.
+    JSON.stringify({ wd_clearance: true, nonce, mode, site_key: siteKey, capabilities }),
+    {
+      status: 200,
+      headers: {
+        "content-type": "application/json",
+        "cache-control": "no-store",
+        "access-control-allow-origin": "*"
+      }
+    }
+  );
+}
+async function proxyPAT(request, apiBase) {
+  const fp = new URL(request.url).searchParams.get("fp") ?? "";
+  const upstream = `${apiBase}/api/v1/clearance/pat?fp=${encodeURIComponent(fp)}`;
+  const headers = new Headers();
+  const auth = request.headers.get("authorization");
+  if (auth) {
+    headers.set("authorization", auth);
+  }
+  let res;
+  try {
+    res = await fetch(upstream, { method: "GET", headers, redirect: "manual" });
+  } catch {
+    return new Response(JSON.stringify({ attested: false, reason: "unreachable" }), {
+      status: 200,
+      headers: { "content-type": "application/json", "cache-control": "no-store" }
+    });
+  }
+  const out = new Headers({
+    "content-type": "application/json",
+    // A cached 401 would stop the client ever retrying with a token.
+    "cache-control": "no-store"
+  });
+  const challengeHeader = res.headers.get("www-authenticate");
+  if (challengeHeader) {
+    out.set("www-authenticate", challengeHeader);
+  }
+  return new Response(res.body, { status: res.status, headers: out });
+}
+function withoutClientTags(request) {
+  if (!request.headers.has(CLASS_HEADER) && !request.headers.has(VERDICT_HEADER)) {
+    return request;
+  }
+  const headers = new Headers(request.headers);
+  headers.delete(CLASS_HEADER);
+  headers.delete(VERDICT_HEADER);
+  return new Request(request, { headers });
+}
+function challenge(request, apiBase, siteKey) {
+  const accept = request.headers.get("accept") ?? "";
+  if (request.method !== "GET" || !accept.includes("text/html")) {
+    return new Response(JSON.stringify({ error: "clearance required" }), {
+      status: 403,
+      headers: { "content-type": "application/json", [VERDICT_HEADER]: "challenged" }
+    });
+  }
+  const html = challengePage(apiBase, siteKey);
+  return new Response(html, {
+    status: 403,
+    headers: {
+      "content-type": "text/html; charset=utf-8",
+      "cache-control": "no-store",
+      [VERDICT_HEADER]: "challenged"
+    }
+  });
+}
+function challengePage(apiBase, siteKey) {
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Checking your browser\u2026</title>
+<style>
+  body { font-family: system-ui, sans-serif; display: flex; align-items: center;
+         justify-content: center; min-height: 100vh; margin: 0; background: #0b0e14; color: #e6e6e6; }
+  .box { text-align: center; max-width: 24rem; padding: 2rem; }
+  .spin { width: 2rem; height: 2rem; margin: 0 auto 1rem; border: 3px solid #2a2f3a;
+          border-top-color: #22d3ee; border-radius: 50%; animation: r 0.8s linear infinite; }
+  @keyframes r { to { transform: rotate(360deg); } }
+  p { color: #9aa4b2; font-size: 0.9rem; line-height: 1.5; }
+</style>
+</head>
+<body>
+<div class="box">
+  <div class="spin" id="spin"></div>
+  <h1 style="font-size:1.1rem">Checking your browser</h1>
+  <p id="msg">This takes a moment and happens only once.</p>
+</div>
+<script>
+${DEVICE_FP_JS}
+(async function () {
+  var msg = document.getElementById('msg');
+  try {
+    // CANONICAL device fp, from the single shared source in device-fp.ts.
+    // Returns the fingerprint plus the raw canvas/WebGL signals the integrity
+    // check below also needs, so neither context is built twice.
+    var dfp = await wdDeviceFP();
+    var fp = dfp.fp;
+    var canvas32 = dfp.canvas32;
+    var webgl = dfp.webgl;
+
+    // Browser-integrity signals (#327). Collected in-browser and reported raw \u2014
+    // the server decides. A real browser is internally consistent; a standard
+    // headless/automation environment betrays incoherence it does not spoof by
+    // default (permission vs Notification state, absent navigator.languages,
+    // a Chrome UA with no window.chrome). Coherent signals earn the token a
+    // 'human-likely' grade; anything off falls back to 'clean' (never blocked).
+    var integrity = {
+      webdriver: navigator.webdriver === true,
+      headless_ua: /headless/i.test(navigator.userAgent),
+      no_plugins: !(navigator.plugins && navigator.plugins.length > 0),
+      no_languages: !(navigator.languages && navigator.languages.length > 0),
+      hardware: navigator.hardwareConcurrency || 0,
+      canvas_ok: canvas32 !== 'na',
+      webgl_ok: webgl !== 'na',
+      chrome_ua: /chrome|chromium|crios/i.test(navigator.userAgent),
+      chrome_obj: (typeof window.chrome === 'object' && window.chrome !== null),
+      perm_coherent: true
+    };
+    try {
+      if (navigator.permissions && navigator.permissions.query && typeof Notification !== 'undefined') {
+        var perm = await navigator.permissions.query({ name: 'notifications' });
+        // Classic headless-Chrome tell: Notification.permission is the default
+        // 'default', yet the Permissions API reports 'denied'. A real browser
+        // agrees with itself.
+        if (Notification.permission === 'default' && perm.state === 'denied') integrity.perm_coherent = false;
+      }
+    } catch (e) { /* permissions unsupported \u2014 leave coherent, fail open */ }
+
+    // Device attestation (#329). On a supporting client \u2014 Apple platforms
+    // today \u2014 this endpoint answers 401 with a PrivateToken challenge, the OS
+    // silently obtains a token and retries, and we get back a receipt worth an
+    // 'attested-human' grade. No puzzle, no interaction, nothing to see.
+    //
+    // Everywhere else it fails or 401s and we move on: the absence of
+    // attestation must never cost a visitor anything, because attester
+    // coverage is thin and not their fault.
+    var patReceipt = '';
+    try {
+      // SAME-ORIGIN by way of the validator's proxy. Fetching WebDecoy directly
+      // meant Safari ignored the 401 challenge entirely \u2014 cross-origin
+      // WWW-Authenticate does not trigger its challenge/response handling, so a
+      // token was never requested. credentials stay same-origin so the browser
+      // is permitted to do the auth exchange.
+      var patRes = await fetch(
+        ${JSON.stringify(PAT_PATH)} + '?fp=' + encodeURIComponent(fp),
+        { credentials: 'same-origin' }
+      );
+      if (patRes.ok) {
+        var patOut = await patRes.json();
+        if (patOut && patOut.attested && patOut.receipt) patReceipt = patOut.receipt;
+      }
+    } catch (e) { /* unsupported or unreachable \u2014 proceed unattested */ }
+
+    var res = await fetch(${JSON.stringify(apiBase)} + '/api/v1/clearance', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        aid: ${JSON.stringify(siteKey)},
+        fp: fp,
+        scope: '',
+        ua: navigator.userAgent,
+        webdriver: integrity.webdriver,
+        headless: integrity.headless_ua,
+        integrity: integrity,
+        pat_receipt: patReceipt
+      })
+    });
+    var out = await res.json();
+    if (out && out.granted && out.token) {
+      document.cookie = 'wd_clearance=' + out.token +
+        '; path=/; secure; samesite=lax; max-age=' + (out.expires_in || 1800);
+      location.reload();
+      return;
+    }
+    document.getElementById('spin').style.display = 'none';
+    msg.textContent = 'Verification did not pass. If you believe this is an error, contact the site owner.';
+  } catch (e) {
+    document.getElementById('spin').style.display = 'none';
+    msg.textContent = 'Verification could not complete. Please retry shortly.';
+  }
+})();
+</script>
+</body>
+</html>`;
+}
+
+// ../clearance-worker/src/host.ts
+function normalizeHost(host) {
+  if (typeof host !== "string") return "";
+  const h = host.trim().toLowerCase().replace(/:\d+$/, "").replace(/\.$/, "");
+  return h.length > 0 && h.length <= 253 ? h : "";
+}
+
+// ../clearance-worker/src/capabilities.ts
+var VALIDATOR_CAPABILITIES = [
+  "route_min_trust",
+  "route_attribution",
+  "monitor_routes",
+  "route_exceptions",
+  "bot_behaviors",
+  "credential_reach"
+];
+
+// ../clearance-worker/src/telemetry.ts
+var WINDOW_SECONDS = 60;
+var MAX_PER_WINDOW = 500;
+var MAX_ROUTE_BYTES = 6e3;
+var ROUTE_ENTRY_OVERHEAD = 40;
+var PREVIEW_ENTRY_OVERHEAD = 60;
+var PREVIEW_CAUSE_OVERHEAD = 16;
+var utf8 = new TextEncoder();
+var SEND_TIMEOUT_MS = 3e3;
+var MAX_HOLD_MS = 2e4;
+var MAX_PENDING_WINDOWS = 16;
+var pendingWindows = /* @__PURE__ */ new Map();
+function windowKey(bucketStart, mode, host) {
+  return `${bucketStart}|${mode}|${host}`;
+}
+function recordVerdict(label, mode, host, reporter, ctx, now = Date.now(), pattern = "", previews = [], behavior = "", outsideReach = "") {
+  try {
+    if (!label || !reporter || !reporter.siteKey || !reporter.apiBase) return;
+    const site = normalizeHost(host);
+    if (!site) return;
+    const bucketStart = Math.floor(now / 1e3 / WINDOW_SECONDS) * WINDOW_SECONDS;
+    const key = windowKey(bucketStart, mode, site);
+    for (const [k, w] of pendingWindows) {
+      if (w.bucketStart !== bucketStart) {
+        flush(w, reporter, ctx);
+        pendingWindows.delete(k);
+      }
+    }
+    let win = pendingWindows.get(key);
+    if (!win) {
+      if (pendingWindows.size >= MAX_PENDING_WINDOWS) {
+        for (const [k, w] of pendingWindows) {
+          flush(w, reporter, ctx);
+          pendingWindows.delete(k);
+        }
+      }
+      win = {
+        bucketStart,
+        mode,
+        host: site,
+        counts: /* @__PURE__ */ new Map(),
+        routes: /* @__PURE__ */ new Map(),
+        previews: /* @__PURE__ */ new Map(),
+        credentials: /* @__PURE__ */ new Map(),
+        routeBytes: 0,
+        total: 0
+      };
+      pendingWindows.set(key, win);
+      scheduleFlush(key, win, reporter, ctx, now);
+    }
+    win.counts.set(label, (win.counts.get(label) ?? 0) + 1);
+    const route = typeof pattern === "string" ? pattern : "";
+    const why = typeof behavior === "string" ? behavior : "";
+    const routeKey = `${route}
+${label}
+${why}`;
+    const entry = win.routes.get(routeKey);
+    if (entry) {
+      entry.count++;
+    } else {
+      win.routes.set(routeKey, { pattern: route, verdict: label, behavior: why, count: 1 });
+      win.routeBytes += utf8.encode(route).length + utf8.encode(label).length + utf8.encode(why).length + ROUTE_ENTRY_OVERHEAD;
+    }
+    for (const p of Array.isArray(previews) ? previews : []) {
+      if (!p || typeof p.pattern !== "string" || !p.pattern) continue;
+      let tally = win.previews.get(p.pattern);
+      if (!tally) {
+        tally = { evaluated: 0, refused: /* @__PURE__ */ new Map() };
+        win.previews.set(p.pattern, tally);
+        win.routeBytes += utf8.encode(p.pattern).length + PREVIEW_ENTRY_OVERHEAD;
+      }
+      tally.evaluated++;
+      if (typeof p.refused === "string" && p.refused) {
+        if (!tally.refused.has(p.refused)) win.routeBytes += utf8.encode(p.refused).length + PREVIEW_CAUSE_OVERHEAD;
+        tally.refused.set(p.refused, (tally.refused.get(p.refused) ?? 0) + 1);
+      }
+    }
+    if (typeof outsideReach === "string" && outsideReach) {
+      win.credentials.set(outsideReach, (win.credentials.get(outsideReach) ?? 0) + 1);
+    }
+    win.total++;
+    if (win.total >= MAX_PER_WINDOW || win.routeBytes >= MAX_ROUTE_BYTES) {
+      flush(win, reporter, ctx);
+      pendingWindows.delete(key);
+    }
+  } catch {
+  }
+}
+function scheduleFlush(key, win, reporter, ctx, now) {
+  try {
+    const windowEnd = (win.bucketStart + WINDOW_SECONDS) * 1e3;
+    const delay = Math.max(0, Math.min(windowEnd - now, MAX_HOLD_MS));
+    ctx.waitUntil(
+      new Promise((resolve) => {
+        setTimeout(() => {
+          try {
+            if (pendingWindows.get(key) === win) {
+              flush(win, reporter, ctx);
+              pendingWindows.delete(key);
+            }
+          } catch {
+          }
+          resolve();
+        }, delay);
+      })
+    );
+  } catch {
+  }
+}
+function flush(win, reporter, ctx) {
+  try {
+    if (win.total <= 0 || win.counts.size === 0) return;
+    const counts = {};
+    for (const [label, count] of win.counts) counts[label] = count;
+    const routeCounts = [];
+    for (const e of win.routes.values()) {
+      const entry = {
+        pattern: e.pattern,
+        verdict: e.verdict,
+        count: e.count
+      };
+      if (e.behavior) entry.behavior = e.behavior;
+      routeCounts.push(entry);
+    }
+    const report = {
+      organization_id: reporter.siteKey,
+      bucket_start: win.bucketStart,
+      mode: win.mode,
+      counts,
+      route_counts: routeCounts,
+      report_id: crypto.randomUUID()
+    };
+    if (win.previews.size > 0) {
+      const previews = [];
+      for (const [pattern, tally] of win.previews) {
+        const additional = {};
+        for (const [cause, count] of tally.refused) additional[cause] = count;
+        previews.push({ pattern, evaluated: tally.evaluated, additional_refusals: additional });
+      }
+      report.previews = previews;
+    }
+    if (win.credentials.size > 0) {
+      const presentations = [];
+      for (const [id, count] of win.credentials) presentations.push({ credential_id: id, outside_reach: count });
+      report.credential_presentations = presentations;
+    }
+    if (reporter.propertyId) report.property_id = reporter.propertyId;
+    report.host = win.host;
+    if (reporter.bundleVersion) report.reporter_version = reporter.bundleVersion;
+    const authenticated = Boolean(reporter.scannerId && reporter.sensorKey);
+    if (authenticated) report.scanner_id = reporter.scannerId;
+    report.capabilities = reporter.capabilities ?? VALIDATOR_CAPABILITIES;
+    ctx.waitUntil(
+      send(reporter.apiBase, JSON.stringify(report), authenticated ? reporter.sensorKey : void 0).then(
+        () => void 0,
+        () => void 0
+        // network error, timeout, abort — all equally ignorable
+      )
+    );
+  } catch {
+  }
+}
+async function send(apiBase, body, sensorKey) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), SEND_TIMEOUT_MS);
+  const headers = { "content-type": "application/json" };
+  if (sensorKey) headers["x-wd-sensor-key"] = sensorKey;
+  try {
+    await fetch(apiBase.replace(/\/+$/, "") + "/api/v1/clearance/telemetry", {
+      method: "POST",
+      headers,
+      body,
+      signal: controller.signal
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// src/sensor/capabilities.ts
+var NETLIFY_VALIDATOR_CAPABILITIES = [
+  "route_min_trust",
+  "route_attribution",
+  "monitor_routes",
+  "route_exceptions",
+  "bot_behaviors",
+  "credential_reach",
+  "bot_verification_rdns"
+];
+
+// ../clearance-lambda/src/verified-bots.ts
+var SUFFIXES = [
+  {
+    category: "search_engines",
+    suffixes: [
+      ".googlebot.com",
+      ".google.com",
+      ".search.msn.com",
+      // Bingbot
+      ".crawl.yahoo.net",
+      ".applebot.apple.com",
+      ".yandex.com",
+      ".yandex.net",
+      ".yandex.ru",
+      ".crawl.baidu.com",
+      ".crawl.baidu.jp"
+    ]
+  }
+];
+function matchCategory(hostname, allow) {
+  const h = hostname.toLowerCase().replace(/\.$/, "");
+  for (const group of SUFFIXES) {
+    if (!allow[group.category]) continue;
+    for (const suffix of group.suffixes) {
+      if (h.endsWith(suffix)) return group.category;
+    }
+  }
+  return null;
+}
+var cache = /* @__PURE__ */ new Map();
+var CACHE_TTL_MS = 36e5;
+var CACHE_MAX = 5e3;
+async function verifyBot(ip, allow, dns, now) {
+  const cached = cache.get(ip);
+  if (cached && now - cached.at < CACHE_TTL_MS) {
+    return cached.category;
+  }
+  let result = null;
+  try {
+    const ptrs = await dns.reverse(ip);
+    for (const ptr of ptrs) {
+      const category = matchCategory(ptr, allow);
+      if (!category) continue;
+      if (await forwardConfirms(ptr, ip, dns)) {
+        result = category;
+        break;
+      }
+    }
+  } catch {
+    result = null;
+  }
+  if (cache.size >= CACHE_MAX) cache.clear();
+  cache.set(ip, { category: result, at: now });
+  return result;
+}
+async function forwardConfirms(hostname, ip, dns) {
+  const host = hostname.replace(/\.$/, "");
+  const resolvers = ip.includes(":") ? [dns.resolve6(host)] : [dns.resolve4(host)];
+  try {
+    const answers = (await Promise.all(resolvers)).flat();
+    return answers.some((a) => a === ip);
+  } catch {
+    return false;
+  }
+}
+
+// src/sensor/verified-bots.ts
+var SEARCH_ENGINE_CATEGORY = "Search Engine Crawler";
+var DNS_TIMEOUT_MS = 1e3;
+var VERIFY_ALL = { search_engines: true, ai_crawlers: true, monitoring: true };
+function reverseName(ip) {
+  if (!ip.includes(":")) {
+    return ip.split(".").reverse().join(".") + ".in-addr.arpa";
+  }
+  const [headPart, tailPart = ""] = ip.split("::");
+  const head = headPart ? headPart.split(":") : [];
+  const tail = tailPart ? tailPart.split(":") : [];
+  const fill = 8 - head.length - tail.length;
+  if (fill < 0) return "";
+  const groups = [...head, ...Array(Math.max(0, fill)).fill("0"), ...tail];
+  return groups.map((g) => g.padStart(4, "0")).join("").split("").reverse().join(".") + ".ip6.arpa";
+}
+function withTimeout(work, ms) {
+  return Promise.race([
+    work,
+    new Promise((_, reject) => setTimeout(() => reject(new Error("dns timeout")), ms))
+  ]);
+}
+function denoResolver(resolve) {
+  return {
+    reverse: (ip) => withTimeout(resolve(reverseName(ip), "PTR"), DNS_TIMEOUT_MS),
+    resolve4: (host) => withTimeout(resolve(host, "A"), DNS_TIMEOUT_MS),
+    resolve6: (host) => withTimeout(resolve(host, "AAAA"), DNS_TIMEOUT_MS)
+  };
+}
+function verifiedBotCategory(ip, userAgent, covered, resolve = typeof Deno !== "undefined" && Deno && typeof Deno.resolveDns === "function" ? Deno.resolveDns.bind(Deno) : void 0, now = Date.now()) {
+  if (!covered || !ip || !resolve || !claimsCrawler(userAgent)) return Promise.resolve("");
+  return verifyBot(ip, VERIFY_ALL, denoResolver(resolve), now).then((category) => category === "search_engines" ? SEARCH_ENGINE_CATEGORY : "").catch(() => "");
+}
+
+// src/sensor/gate.ts
+async function runGate(request, context, env) {
+  try {
+    const url = new URL(request.url);
+    const healthNonce = url.searchParams.get(HEALTHCHECK_PARAM);
+    const requestHost = normalizeHost(url.hostname);
+    const config2 = await getConfig(
+      { apiBase: env.ingest, siteKey: env.siteKey },
+      requestHost
+    );
+    if (healthNonce !== null) {
+      return healthResponse(
+        healthNonce,
+        config2 ? config2.mode : "unknown",
+        env.siteKey,
+        NETLIFY_VALIDATOR_CAPABILITIES
+      );
+    }
+    if (url.pathname === PAT_PATH) {
+      return proxyPAT(request, env.ingest);
+    }
+    if (!config2) return void 0;
+    const verdict = await evaluate(request, config2, {
+      siteKey: env.siteKey,
+      // Netlify verifies crawlers itself, and pays a DNS round trip for the
+      // answer, so it is asked for only where it can change one (#1187).
+      verifiedBotCategory: (req, covered) => verifiedBotCategory(context.ip ?? "", req.headers.get("user-agent") ?? "", covered)
+    });
+    recordVerdict(
+      verdict.label,
+      verdict.mode,
+      url.hostname,
+      {
+        siteKey: env.siteKey,
+        apiBase: env.ingest,
+        scannerId: env.scannerId,
+        sensorKey: env.sensorKey,
+        bundleVersion: env.version,
+        capabilities: NETLIFY_VALIDATOR_CAPABILITIES
+      },
+      { waitUntil: (p) => context.waitUntil?.(p) },
+      Date.now(),
+      verdict.pattern,
+      verdict.previews,
+      verdict.behavior
+    );
+    if (verdict.pass || verdict.mode !== "enforce") {
+      return forwardWithVerdict(request, context, verdict.label);
+    }
+    return challenge(request, env.ingest, env.siteKey);
+  } catch {
+    return void 0;
+  }
+}
+async function forwardWithVerdict(request, context, verdict) {
+  try {
+    if (typeof context.next !== "function") return void 0;
+    const clean = withoutClientTags(request);
+    const headers = new Headers(clean.headers);
+    headers.set(VERDICT_HEADER, verdict);
+    headers.delete(CLASS_HEADER);
+    return await context.next(new Request(clean, { headers }));
+  } catch {
+    return void 0;
+  }
+}
+
+// src/sensor/build.ts
+var BUILD = "netlify-daad13e4589d";
+
 // src/sensor/entry.ts
 var DEFAULT_INGEST = "https://in.webdecoy.com";
 var BEACON_TIMEOUT_MS = 2e3;
+var ENFORCEMENT_ON = ["on", "1", "true", "yes", "enabled"];
 function readEnv(get) {
   const siteKey = (get("WEBDECOY_SITE_KEY") ?? "").trim();
   const scannerId = (get("WEBDECOY_SCANNER_ID") ?? "").trim();
   const sensorKey = (get("WEBDECOY_SENSOR_KEY") ?? "").trim();
   if (!siteKey || !scannerId || !sensorKey) return null;
   const ingest = (get("WEBDECOY_INGEST") ?? "").trim().replace(/\/+$/, "") || DEFAULT_INGEST;
-  return { siteKey, scannerId, sensorKey, ingest };
+  const enforcement = ENFORCEMENT_ON.includes((get("WEBDECOY_ENFORCEMENT") ?? "").trim().toLowerCase());
+  return { siteKey, scannerId, sensorKey, ingest, enforcement };
 }
 async function sendBeacon(env, payload, fetcher = fetch) {
   try {
@@ -314,21 +1647,31 @@ async function sendBeacon(env, payload, fetcher = fetch) {
 }
 function makeHandler(getEnv, fetcher = fetch) {
   return (request, context) => {
+    let env = null;
     try {
-      const env = readEnv(getEnv);
+      env = readEnv(getEnv);
       if (!env) return void 0;
       const url = new URL(request.url);
-      if (isStaticAsset(url.pathname)) return void 0;
-      const verdict = classify(request, url);
-      if (!verdict.send) return void 0;
-      const payload = buildPayload(request, url, env.siteKey, env.scannerId, context, verdict);
-      const beacon = sendBeacon(env, payload, fetcher);
-      if (typeof context.waitUntil === "function") {
-        context.waitUntil(beacon);
+      if (!isStaticAsset(url.pathname)) {
+        const verdict = classify(request, url);
+        if (verdict.send) {
+          const payload = buildPayload(request, url, env.siteKey, env.scannerId, context, verdict);
+          const beacon = sendBeacon(env, payload, fetcher);
+          if (typeof context.waitUntil === "function") {
+            context.waitUntil(beacon);
+          }
+        }
       }
     } catch {
     }
-    return void 0;
+    if (!env || !env.enforcement) return void 0;
+    return runGate(request, context, {
+      siteKey: env.siteKey,
+      scannerId: env.scannerId,
+      sensorKey: env.sensorKey,
+      ingest: env.ingest,
+      version: BUILD
+    });
   };
 }
 var handler = makeHandler(

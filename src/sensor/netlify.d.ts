@@ -10,7 +10,12 @@ export interface NetlifyContext {
   site?: { id?: string; name?: string; url?: string };
   requestId?: string;
   waitUntil?: (promise: Promise<unknown>) => void;
-  next: () => Promise<Response>;
+  /**
+   * Continue the chain. A Request may be passed to hand what follows —
+   * the site's own edge functions, its redirects and its origin — a modified
+   * request; the gate uses it for the verdict header (#1188).
+   */
+  next: (request?: Request) => Promise<Response>;
 }
 
 declare global {
