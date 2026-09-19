@@ -6,7 +6,7 @@
   "type": "module",
   "main": "src/index.ts",
   "scripts": {
-    "build": "netlify-extension build -a",
+    "build": "netlify-extension build -a && node scripts/publish-details.mjs",
     "dev": "netlify-extension dev --open",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",

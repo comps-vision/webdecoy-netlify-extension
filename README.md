@@ -8,11 +8,9 @@ npm run gen:agents      # regenerate src/sensor/agents.generated.ts from pkg/age
 npm run build:bundle    # src/sensor -> src/edge-functions/webdecoy-sensor.ts (committed)
 npm test
 npm run typecheck
-npm run build           # netlify-extension build -a (the buildtime component)
+npm run build           # netlify-extension build -a (the buildtime component), then publish details.md
 ```
 
 Publishing: this directory is deployed as its own Netlify project (see `netlify.toml`); the extension is then created in the Netlify UI, which assigns the slug to put in `extension.yaml`. Private to the team until made public.
 
-## This repository is a deploy mirror
-
-Netlify builds the extension from this repository because its GitHub app is installed for this organization. The source of truth is `edge/netlify-extension/` in `WebDecoy/app`; this mirror is refreshed from there after each merge (`git archive origin/main edge/netlify-extension`) and must not be edited directly.
+`details.md` is the extension's public install page. Netlify reads it from the host's published output (`.ntli/site/static`), which the SDK only writes for extensions with a UI, so `scripts/publish-details.mjs` puts it there and fails the build without it (#1185).
