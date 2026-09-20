@@ -263,6 +263,77 @@ describe('a site that opted in', () => {
     expect(report.scanner_id).toBe('scanner-1');
     expect(report.capabilities).toContain('bot_verification_rdns');
   });
+
+  /**
+   * #1197: this validator applied credential limits and reported none of
+   * them, because its report call listed the fields one by one and stopped
+   * one short of the newest. A capability it declares but does not report
+   * makes the dashboard read "covered" over a site that counts nothing, which
+   * is the one thing #1121 was careful never to do.
+   *
+   * Asserted on the shipped handler, through a real signed token, so it holds
+   * for whatever the decision carries next as well.
+   */
+  it('reports a genuine credential presented where it grants nothing', async () => {
+    const keyPair = (await crypto.subtle.generateKey({ name: 'Ed25519' }, true, [
+      'sign',
+      'verify',
+    ])) as CryptoKeyPair;
+    const raw = new Uint8Array(await crypto.subtle.exportKey('raw', keyPair.publicKey));
+    const publicKey = btoa(String.fromCharCode(...raw));
+    const claims = {
+      kid: 'k1',
+      tenant: 'org-1',
+      typ: 'machine',
+      sub: 'cred-reports',
+      iat: 1000,
+      exp: 4102444800,
+    };
+    const payload = new TextEncoder().encode(JSON.stringify(claims));
+    const sig = new Uint8Array(await crypto.subtle.sign({ name: 'Ed25519' }, keyPair.privateKey, payload));
+    const b64url = (b: Uint8Array) =>
+      btoa(String.fromCharCode(...b))
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/, '');
+    const token = `${b64url(payload)}.${b64url(sig)}`;
+
+    const bodies: string[] = [];
+    const { handler } = await loadHandler(ENFORCING_ENV, {
+      onTelemetry: (b) => bodies.push(b),
+      config: () =>
+        new Response(
+          JSON.stringify(
+            config({
+              keys: [{ kid: 'k1', public_key: publicKey }],
+              restricted_credentials: [{ id: 'cred-reports', here: true, paths: ['/protected/reports/*'] }],
+            })
+          ),
+          { status: 200 }
+        ),
+    });
+    const site = nextHost();
+    vi.useFakeTimers();
+    // Its own path: granted, and nothing to report about it.
+    const granted = await handler(
+      req(`https://${site}/protected/reports/daily`, { 'x-wd-service-token': token }),
+      ctx()
+    );
+    // Another protected path: the credential grants nothing, the request is
+    // refused for having no clearance, and the presentation is counted.
+    const refused = (await handler(
+      req(`https://${site}/protected/admin`, { 'x-wd-service-token': token }),
+      ctx()
+    )) as Response;
+    await vi.advanceTimersByTimeAsync(21_000);
+    vi.useRealTimers();
+
+    expect((granted as Response).status).toBe(200);
+    expect(refused.status).toBe(403);
+    const report = JSON.parse(bodies.find((b) => b.includes(site)) ?? '{}');
+    expect(report.credential_presentations).toEqual([{ credential_id: 'cred-reports', outside_reach: 1 }]);
+    expect(report.counts).toEqual({ machine: 1, missing: 1 });
+  });
 });
 
 describe('fail open', () => {

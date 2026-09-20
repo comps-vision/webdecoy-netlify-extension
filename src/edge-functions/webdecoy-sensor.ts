@@ -1276,8 +1276,14 @@ var pendingWindows = /* @__PURE__ */ new Map();
 function windowKey(bucketStart, mode, host) {
   return `${bucketStart}|${mode}|${host}`;
 }
-function recordVerdict(label, mode, host, reporter, ctx, now = Date.now(), pattern = "", previews = [], behavior = "", outsideReach = "") {
+function recordVerdict(verdict, host, reporter, ctx, now = Date.now()) {
   try {
+    const label = verdict?.label ?? "";
+    const mode = verdict?.mode ?? "";
+    const pattern = verdict?.pattern ?? "";
+    const previews = verdict?.previews ?? [];
+    const behavior = verdict?.behavior ?? "";
+    const outsideReach = verdict?.outsideReach ?? "";
     if (!label || !reporter || !reporter.siteKey || !reporter.apiBase) return;
     const site = normalizeHost(host);
     if (!site) return;
@@ -1580,8 +1586,10 @@ async function runGate(request, context, env) {
       verifiedBotCategory: (req, covered) => verifiedBotCategory(context.ip ?? "", req.headers.get("user-agent") ?? "", covered)
     });
     recordVerdict(
-      verdict.label,
-      verdict.mode,
+      // The whole verdict: this validator applies every rule the Worker's
+      // decision applies, so it reports everything that decision carries,
+      // including fields added after this call was written (#1197).
+      verdict,
       url.hostname,
       {
         siteKey: env.siteKey,
@@ -1592,10 +1600,7 @@ async function runGate(request, context, env) {
         capabilities: NETLIFY_VALIDATOR_CAPABILITIES
       },
       { waitUntil: (p) => context.waitUntil?.(p) },
-      Date.now(),
-      verdict.pattern,
-      verdict.previews,
-      verdict.behavior
+      Date.now()
     );
     if (verdict.pass || verdict.mode !== "enforce") {
       return forwardWithVerdict(request, context, verdict.label);
@@ -1619,7 +1624,7 @@ async function forwardWithVerdict(request, context, verdict) {
 }
 
 // src/sensor/build.ts
-var BUILD = "netlify-daad13e4589d";
+var BUILD = "netlify-9602bfb1edb9";
 
 // src/sensor/entry.ts
 var DEFAULT_INGEST = "https://in.webdecoy.com";

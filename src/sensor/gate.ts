@@ -101,8 +101,10 @@ export async function runGate(
     // void, throws nothing, sends inside waitUntil. Deleting this call must
     // leave the gate's behaviour identical.
     recordVerdict(
-      verdict.label,
-      verdict.mode,
+      // The whole verdict: this validator applies every rule the Worker's
+      // decision applies, so it reports everything that decision carries,
+      // including fields added after this call was written (#1197).
+      verdict,
       url.hostname,
       {
         siteKey: env.siteKey,
@@ -113,10 +115,7 @@ export async function runGate(
         capabilities: NETLIFY_VALIDATOR_CAPABILITIES,
       },
       { waitUntil: (p) => context.waitUntil?.(p) },
-      Date.now(),
-      verdict.pattern,
-      verdict.previews,
-      verdict.behavior
+      Date.now()
     );
 
     if (verdict.pass || verdict.mode !== 'enforce') {
