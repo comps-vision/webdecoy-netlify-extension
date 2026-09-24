@@ -306,6 +306,88 @@ function buildPayload(request, url, siteKey, scannerId, context, v) {
   };
 }
 
+// ../clearance-worker/src/llm-platforms.generated.ts
+var LLM_PLATFORMS = {
+  "chat.deepseek.com": "DeepSeek",
+  "chat.openai.com": "ChatGPT",
+  "chatgpt.com": "ChatGPT",
+  "claude.ai": "Claude",
+  "copilot.microsoft.com": "Copilot",
+  "deepseek.com": "DeepSeek",
+  "gemini.google.com": "Gemini",
+  "grok.com": "Grok",
+  "kagi.com": "Kagi",
+  "meta.ai": "Meta AI",
+  "perplexity.ai": "Perplexity",
+  "phind.com": "Phind",
+  "www.deepseek.com": "DeepSeek",
+  "www.grok.com": "Grok",
+  "www.kagi.com": "Kagi",
+  "www.meta.ai": "Meta AI",
+  "www.perplexity.ai": "Perplexity",
+  "www.phind.com": "Phind",
+  "www.you.com": "You.com",
+  "you.com": "You.com"
+};
+
+// ../clearance-worker/src/llm-referral.ts
+var TAG_KEYS = ["utm_source", "ref", "utm_medium"];
+var MAX_PATH = 500;
+function classifyReferral(referer, pageUrl) {
+  const ref = (referer ?? "").trim();
+  if (ref) {
+    try {
+      return LLM_PLATFORMS[new URL(ref).hostname.toLowerCase()] ?? "";
+    } catch {
+      return "";
+    }
+  }
+  let url;
+  try {
+    url = new URL(pageUrl);
+  } catch {
+    return "";
+  }
+  for (const key of TAG_KEYS) {
+    for (const value of url.searchParams.getAll(key)) {
+      const platform = platformForTag(value);
+      if (platform) return platform;
+    }
+  }
+  return "";
+}
+var squash = (s) => s.replace(/[ \-_.]/g, "");
+function platformForTag(raw) {
+  let value = raw.trim().toLowerCase();
+  if (!value) return "";
+  try {
+    const host = new URL(value).hostname;
+    if (host) value = host.toLowerCase();
+  } catch {
+  }
+  value = value.replace(/\.$/, "");
+  if (LLM_PLATFORMS[value]) return LLM_PLATFORMS[value];
+  const normalized = squash(value);
+  for (const [domain, name] of Object.entries(LLM_PLATFORMS)) {
+    if (normalized === squash(name.toLowerCase()) || normalized === domain.replace(/^www\./, "").replace(/\./g, "")) {
+      return name;
+    }
+  }
+  return "";
+}
+function navigationReferral(request, url) {
+  if (request.method !== "GET") return null;
+  const h = request.headers;
+  if (h.get("sec-fetch-mode") !== "navigate") return null;
+  const dest = h.get("sec-fetch-dest");
+  if (dest && dest !== "document") return null;
+  const platform = classifyReferral(h.get("referer") ?? "", url.toString());
+  if (!platform) return null;
+  let path = url.pathname || "/";
+  if (path.length > MAX_PATH) path = path.slice(0, MAX_PATH);
+  return { platform, path };
+}
+
 // ../clearance-worker/src/web-bot-auth.ts
 var TAG = "web-bot-auth";
 async function verifyWebBotAuth(request, signedAgents) {
@@ -839,6 +921,7 @@ async function evaluate(request, config2, platform) {
     previews,
     behavior: actual.pass ? behavior : "",
     crawlerBehavior: found.crawler?.behavior ?? "",
+    referral: navigationReferral(request, new URL(request.url)),
     outsideReach: found.outsideReach ?? ""
   };
 }
@@ -1312,7 +1395,8 @@ var VALIDATOR_CAPABILITIES = [
   "bot_behaviors",
   "credential_reach",
   "route_refusals",
-  "crawler_behavior"
+  "crawler_behavior",
+  "ai_referrals"
 ];
 
 // ../clearance-worker/src/telemetry.ts
@@ -1366,6 +1450,7 @@ function recordVerdict(verdict, host, reporter, ctx, now = Date.now()) {
         routes: /* @__PURE__ */ new Map(),
         previews: /* @__PURE__ */ new Map(),
         credentials: /* @__PURE__ */ new Map(),
+        referrals: /* @__PURE__ */ new Map(),
         routeBytes: 0,
         total: 0
       };
@@ -1403,6 +1488,18 @@ ${who}`;
     }
     if (typeof outsideReach === "string" && outsideReach) {
       win.credentials.set(outsideReach, (win.credentials.get(outsideReach) ?? 0) + 1);
+    }
+    const referral = verdict?.referral;
+    if (referral && typeof referral.platform === "string" && referral.platform && typeof referral.path === "string") {
+      const refKey = `${referral.platform}
+${referral.path}`;
+      const tally = win.referrals.get(refKey);
+      if (tally) {
+        tally.count++;
+      } else {
+        win.referrals.set(refKey, { platform: referral.platform, path: referral.path, count: 1 });
+        win.routeBytes += utf8.encode(referral.platform).length + utf8.encode(referral.path).length + ROUTE_ENTRY_OVERHEAD;
+      }
     }
     win.total++;
     if (win.total >= MAX_PER_WINDOW || win.routeBytes >= MAX_ROUTE_BYTES) {
@@ -1471,6 +1568,9 @@ function flush(win, reporter, ctx) {
       for (const [id, count] of win.credentials) presentations.push({ credential_id: id, outside_reach: count });
       report.credential_presentations = presentations;
     }
+    if (win.referrals.size > 0) {
+      report.ai_referrals = [...win.referrals.values()].map((r) => ({ platform: r.platform, path: r.path, count: r.count }));
+    }
     if (reporter.propertyId) report.property_id = reporter.propertyId;
     report.host = win.host;
     if (reporter.bundleVersion) report.reporter_version = reporter.bundleVersion;
@@ -1513,7 +1613,8 @@ var NETLIFY_VALIDATOR_CAPABILITIES = [
   "bot_behaviors",
   "credential_reach",
   "bot_verification_rdns",
-  "crawler_behavior"
+  "crawler_behavior",
+  "ai_referrals"
 ];
 
 // ../clearance-lambda/src/verified-bots.ts
@@ -1683,7 +1784,7 @@ async function forwardWithVerdict(request, context, verdict) {
 }
 
 // src/sensor/build.ts
-var BUILD = "netlify-6f649a141df6";
+var BUILD = "netlify-6e6b4ede00f5";
 
 // src/sensor/entry.ts
 var DEFAULT_INGEST = "https://in.webdecoy.com";
