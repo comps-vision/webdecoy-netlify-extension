@@ -23,4 +23,5 @@ export const NETLIFY_VALIDATOR_CAPABILITIES: readonly string[] = [
   'bot_behaviors',
   'credential_reach',
   'bot_verification_rdns',
+  'crawler_behavior',
 ];

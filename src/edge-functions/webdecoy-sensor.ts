@@ -837,7 +837,8 @@ async function evaluate(request, config2, platform) {
     pattern,
     mode,
     previews,
-    behavior,
+    behavior: actual.pass ? behavior : "",
+    crawlerBehavior: found.crawler?.behavior ?? "",
     outsideReach: found.outsideReach ?? ""
   };
 }
@@ -1310,7 +1311,8 @@ var VALIDATOR_CAPABILITIES = [
   "route_exceptions",
   "bot_behaviors",
   "credential_reach",
-  "route_refusals"
+  "route_refusals",
+  "crawler_behavior"
 ];
 
 // ../clearance-worker/src/telemetry.ts
@@ -1335,6 +1337,7 @@ function recordVerdict(verdict, host, reporter, ctx, now = Date.now()) {
     const pattern = verdict?.pattern ?? "";
     const previews = verdict?.previews ?? [];
     const behavior = verdict?.behavior ?? "";
+    const crawlerBehavior = verdict?.crawlerBehavior ?? "";
     const outsideReach = verdict?.outsideReach ?? "";
     if (!label || !reporter || !reporter.siteKey || !reporter.apiBase) return;
     const site = normalizeHost(host);
@@ -1372,15 +1375,17 @@ function recordVerdict(verdict, host, reporter, ctx, now = Date.now()) {
     win.counts.set(label, (win.counts.get(label) ?? 0) + 1);
     const route = typeof pattern === "string" ? pattern : "";
     const why = typeof behavior === "string" ? behavior : "";
+    const who = typeof crawlerBehavior === "string" ? crawlerBehavior : "";
     const routeKey = `${route}
 ${label}
-${why}`;
+${why}
+${who}`;
     const entry = win.routes.get(routeKey);
     if (entry) {
       entry.count++;
     } else {
-      win.routes.set(routeKey, { pattern: route, verdict: label, behavior: why, count: 1 });
-      win.routeBytes += utf8.encode(route).length + utf8.encode(label).length + utf8.encode(why).length + ROUTE_ENTRY_OVERHEAD;
+      win.routes.set(routeKey, { pattern: route, verdict: label, behavior: why, crawlerBehavior: who, count: 1 });
+      win.routeBytes += utf8.encode(route).length + utf8.encode(label).length + utf8.encode(why).length + utf8.encode(who).length + ROUTE_ENTRY_OVERHEAD;
     }
     for (const p of Array.isArray(previews) ? previews : []) {
       if (!p || typeof p.pattern !== "string" || !p.pattern) continue;
@@ -1441,6 +1446,7 @@ function flush(win, reporter, ctx) {
         count: e.count
       };
       if (e.behavior) entry.behavior = e.behavior;
+      if (e.crawlerBehavior) entry.crawler_behavior = e.crawlerBehavior;
       routeCounts.push(entry);
     }
     const report = {
@@ -1506,7 +1512,8 @@ var NETLIFY_VALIDATOR_CAPABILITIES = [
   "route_exceptions",
   "bot_behaviors",
   "credential_reach",
-  "bot_verification_rdns"
+  "bot_verification_rdns",
+  "crawler_behavior"
 ];
 
 // ../clearance-lambda/src/verified-bots.ts
@@ -1676,7 +1683,7 @@ async function forwardWithVerdict(request, context, verdict) {
 }
 
 // src/sensor/build.ts
-var BUILD = "netlify-07f9a23d7156";
+var BUILD = "netlify-6f649a141df6";
 
 // src/sensor/entry.ts
 var DEFAULT_INGEST = "https://in.webdecoy.com";
