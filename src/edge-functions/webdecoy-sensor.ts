@@ -4,11 +4,9 @@
 var AGENTS = [
   ["reflectionbot", "Reflectionbot", "reflectionbot", "crawler"],
   ["gptbot", "GPTBot", "gptbot", "crawler"],
-  ["chatgpt-user", "ChatGPT-User", "chatgpt-user", "crawler"],
-  ["chatgpt", "ChatGPT-User", "chatgpt-user", "crawler"],
-  ["oai-searchbot", "OAI-SearchBot", "oai-searchbot", "crawler"],
   ["claudebot", "ClaudeBot", "claudebot", "crawler"],
-  ["anthropic", "Anthropic", "anthropic", "crawler"],
+  ["anthropic-ai", "Anthropic", "anthropic", "crawler"],
+  ["claude-web", "Claude-Web", "claude-web", "crawler"],
   ["ccbot", "CCBot", "ccbot", "crawler"],
   ["google-extended", "Google-Extended", "google-extended", "crawler"],
   ["bytespider", "ByteSpider", "bytespider", "crawler"],
@@ -17,10 +15,9 @@ var AGENTS = [
   ["meta-externalagent", "Meta-ExternalAgent", "meta-externalagent", "crawler"],
   ["cohere-ai", "Cohere", "cohere-ai", "crawler"],
   ["cohere", "Cohere", "cohere-ai", "crawler"],
-  ["perplexitybot", "PerplexityBot", "perplexitybot", "crawler"],
   ["applebot-extended", "Applebot-Extended", "applebot-extended", "crawler"],
   ["youbot", "YouBot", "youbot", "crawler"],
-  ["mistral", "MistralBot", "mistral", "crawler"],
+  ["mistralbot", "MistralBot", "mistral", "crawler"],
   ["gemini", "Gemini", "gemini", "crawler"],
   ["ai2bot", "AI2Bot", "ai2bot", "crawler"],
   ["deepseek", "DeepSeek", "deepseek", "crawler"],
@@ -37,6 +34,9 @@ var AGENTS = [
   ["sofyabot", "SofyaBot", "sofyabot", "crawler"],
   ["xai-searchbot", "xAI-SearchBot", "xai-searchbot", "crawler"],
   ["linkupbot", "LinkupBot", "linkupbot", "crawler"],
+  ["perplexitybot", "PerplexityBot", "perplexitybot", "crawler"],
+  ["claude-searchbot", "Claude-SearchBot", "claude-searchbot", "crawler"],
+  ["oai-searchbot", "OAI-SearchBot", "oai-searchbot", "crawler"],
   ["searchgpt", "SearchGPT", "searchgpt", "crawler"],
   ["phind", "Phind", "phind", "crawler"],
   ["kagi", "Kagi", "kagi", "crawler"],
@@ -58,7 +58,9 @@ var AGENTS = [
   ["multion", "MultiOn", "multion", "crawler"],
   ["iboubot", "IbouBot", "iboubot", "crawler"],
   ["googlebot", "Googlebot", "googlebot", "crawler"],
+  ["google-inspectiontool", "Google-InspectionTool", "google-inspectiontool", "crawler"],
   ["bingbot", "Bingbot", "bingbot", "crawler"],
+  ["msnbot", "MSNBot", "msnbot", "crawler"],
   ["yandexbot", "YandexBot", "yandexbot", "crawler"],
   ["baiduspider", "Baiduspider", "baiduspider", "crawler"],
   ["duckduckbot", "DuckDuckBot", "duckduckbot", "crawler"],
@@ -136,6 +138,7 @@ var AGENTS = [
   ["heritrix", "Heritrix", "heritrix", "crawler"],
   ["brozzler", "Brozzler", "brozzler", "crawler"],
   ["facebookexternalhit", "Facebook", "facebookexternalhit", "crawler"],
+  ["facebot", "Facebot", "facebot", "crawler"],
   ["twitterbot", "Twitterbot", "twitterbot", "crawler"],
   ["linkedinbot", "LinkedInBot", "linkedinbot", "crawler"],
   ["slackbot", "Slackbot", "slackbot", "crawler"],
@@ -163,7 +166,11 @@ var AGENTS = [
   ["freshping", "Freshping", "freshping", "crawler"],
   ["hetrixtools", "HetrixTools", "hetrixtools", "crawler"],
   ["nodeping", "NodePing", "nodeping", "crawler"],
+  ["gtmetrix", "GTmetrix", "gtmetrix", "crawler"],
+  ["chrome-lighthouse", "Lighthouse", "chrome-lighthouse", "crawler"],
+  ["google page speed", "Lighthouse", "chrome-lighthouse", "crawler"],
   ["feedly", "Feedly", "feedly", "crawler"],
+  ["feedfetcher", "Feedfetcher-Google", "feedfetcher-google", "crawler"],
   ["newsblur", "NewsBlur", "newsblur", "crawler"],
   ["inoreader", "Inoreader", "inoreader", "crawler"],
   ["theoldreader", "The Old Reader", "theoldreader", "crawler"],
@@ -183,6 +190,10 @@ var AGENTS = [
   ["apify", "Apify", "apify", "crawler"],
   ["crawlbase", "Crawlbase", "crawlbase", "crawler"],
   ["webscrapingapi", "WebScrapingAPI", "webscrapingapi", "crawler"],
+  ["chatgpt-user", "ChatGPT-User", "chatgpt-user", "crawler"],
+  ["perplexity-user", "Perplexity-User", "perplexity-user", "crawler"],
+  ["mistralai-user", "MistralAI-User", "mistralai-user", "crawler"],
+  ["meta-externalfetcher", "Meta-ExternalFetcher", "meta-externalfetcher", "crawler"],
   ["gemini-deep-research", "Gemini-Deep-Research", "gemini-deep-research", "crawler"],
   ["copilot", "Microsoft Copilot", "copilot", "crawler"],
   ["cortana", "Cortana", "cortana", "crawler"],
@@ -663,6 +674,13 @@ function resolveRoute(path, rules, siteMode) {
   const enforcing = /* @__PURE__ */ new Set();
   const covering = [];
   const excepting = [];
+  const refuses = /* @__PURE__ */ new Map();
+  const refusedUnion = (already, patterns) => {
+    const set = new Set(already);
+    for (const p of patterns) for (const b of refuses.get(p) ?? []) set.add(b);
+    return set.size === 0 ? void 0 : [...set].sort();
+  };
+  const preview = (pattern, requiredTrust, refused2) => refused2 ? { pattern, required_trust: requiredTrust, refused_behaviors: refused2 } : { pattern, required_trust: requiredTrust };
   for (const r of rules) {
     if (!patternMatches(path, r.pattern)) continue;
     if ((r.exceptions ?? []).some((e) => patternMatches(path, e))) {
@@ -674,6 +692,10 @@ function resolveRoute(path, rules, siteMode) {
     const tr = rank(r.min_trust);
     if (seen === void 0 || tr > seen) strictest.set(r.pattern, tr);
     if (r.mode !== "monitor") enforcing.add(r.pattern);
+    for (const b of r.refuse_behaviors ?? []) {
+      if (!refuses.has(r.pattern)) refuses.set(r.pattern, /* @__PURE__ */ new Set());
+      refuses.get(r.pattern)?.add(b);
+    }
   }
   const previews = [];
   if (covering.length === 0) {
@@ -688,7 +710,8 @@ function resolveRoute(path, rules, siteMode) {
       required_trust: "",
       requirement_source: "",
       previews,
-      excepted_by: exceptedBy
+      excepted_by: exceptedBy,
+      refused_behaviors: []
     };
   }
   covering.sort((a, b) => specificity(b) - specificity(a));
@@ -697,7 +720,7 @@ function resolveRoute(path, rules, siteMode) {
   let decidingMode = siteMonitors ? "monitor" : "enforce";
   if (deciding.length === 0) {
     if (!siteMonitors) {
-      for (const p of covering) previews.push({ pattern: p, required_trust: grade(strictest.get(p) ?? 0) });
+      for (const p of covering) previews.push(preview(p, grade(strictest.get(p) ?? 0), refusedUnion([], [p])));
     }
     deciding = covering;
     decidingMode = "monitor";
@@ -711,10 +734,11 @@ function resolveRoute(path, rules, siteMode) {
       source = p;
     }
   }
+  const refused = refusedUnion([], deciding) ?? [];
   if (decidingMode === "enforce") {
     for (const p of covering) {
       if (enforcing.has(p)) continue;
-      previews.push({ pattern: p, required_trust: grade(Math.max(best, strictest.get(p) ?? 0)) });
+      previews.push(preview(p, grade(Math.max(best, strictest.get(p) ?? 0)), refusedUnion(refused, [p])));
     }
   }
   return {
@@ -724,7 +748,8 @@ function resolveRoute(path, rules, siteMode) {
     required_trust: grade(best),
     requirement_source: source,
     previews,
-    excepted_by: ""
+    excepted_by: "",
+    refused_behaviors: refused
   };
 }
 
@@ -779,9 +804,17 @@ function credentialGrants(here, paths, path) {
 // ../clearance-worker/src/decision.ts
 var SERVICE_TOKEN_HEADER = "x-wd-service-token";
 var CLEARANCE_COOKIE = "wd_clearance";
-function decide(gate2, need) {
+function decide(gate2, need, refused = []) {
   if (gate2.graded && need && !meetsTrust(gate2.graded.trust, need)) {
     return { pass: false, label: "insufficient-trust" };
+  }
+  if (gate2.crawler && refused.length > 0) {
+    if (gate2.crawler.behavior && refused.includes(gate2.crawler.behavior)) {
+      return { pass: false, label: "crawler-refused" };
+    }
+    if (!gate2.crawler.behavior && gate2.crawler.exempted) {
+      return { pass: false, label: "missing" };
+    }
   }
   return { pass: gate2.pass, label: gate2.label };
 }
@@ -791,11 +824,11 @@ async function evaluate(request, config2, platform) {
   const mode = route.deciding_mode || config2.mode;
   const found = await gate(request, config2, platform, route.covering.length > 0, route.excepted_by !== "");
   const behavior = found.behavior ?? "";
-  const actual = decide(found, route.required_trust);
+  const actual = decide(found, route.required_trust, route.refused_behaviors);
   const pattern = actual.label === "excepted" ? route.excepted_by : actual.label === "unscoped" ? "" : route.attributed;
   const refusedNow = !actual.pass && mode === "enforce";
   const previews = route.previews.map((c) => {
-    const promoted = decide(found, c.required_trust);
+    const promoted = decide(found, c.required_trust, c.refused_behaviors ?? []);
     return { pattern: c.pattern, refused: !promoted.pass && !refusedNow ? promoted.label : "" };
   });
   return {
@@ -834,36 +867,38 @@ async function machineCredential(request, config2, platform) {
 }
 async function gateChecks(request, config2, platform, covered, excepted) {
   const botCategory = await platform.verifiedBotCategory(request, covered) || "";
+  const crawler = botCategory ? { behavior: behaviorForCategory(botCategory), exempted: false } : void 0;
   if (botCategory && exemptsCategory(botCategory, config2)) {
-    return { pass: true, label: "verified-bot", behavior: behaviorForCategory(botCategory) };
+    const behavior = behaviorForCategory(botCategory);
+    return { pass: true, label: "verified-bot", behavior, crawler: { behavior, exempted: true } };
   }
   const agent = await verifyWebBotAuth(request, config2.signed_agents);
   if (agent.status === "verified" && exemptsAgent(agent.category, config2)) {
-    return { pass: true, label: "signed-agent", behavior: agentBehavior(agent.category) };
+    return { pass: true, label: "signed-agent", behavior: agentBehavior(agent.category), crawler: { behavior: agentBehavior(agent.category), exempted: true } };
   }
   if (agent.status === "invalid") {
     if (covered) {
-      return { pass: false, label: "agent-impersonation" };
+      return { pass: false, label: "agent-impersonation", crawler };
     }
   }
   if (!covered) {
     if (excepted) {
-      return { pass: true, label: "excepted" };
+      return { pass: true, label: "excepted", crawler };
     }
-    return { pass: true, label: "unscoped" };
+    return { pass: true, label: "unscoped", crawler };
   }
   const token = readCookie(request.headers.get("cookie") ?? "", CLEARANCE_COOKIE);
   if (!token) {
-    return { pass: false, label: "missing" };
+    return { pass: false, label: "missing", crawler };
   }
   const claims = await verifyToken(token, config2.keys, platform.siteKey);
   if (!claims || (claims.typ ?? "") !== "") {
-    return { pass: false, label: "invalid" };
+    return { pass: false, label: "invalid", crawler };
   }
   if (config2.denied_fps && config2.denied_fps.includes(claims.fp)) {
-    return { pass: false, label: "revoked" };
+    return { pass: false, label: "revoked", crawler };
   }
-  return { pass: true, label: "valid", graded: { trust: claims.trust } };
+  return { pass: true, label: "valid", graded: { trust: claims.trust }, crawler };
 }
 function routeRules(config2) {
   const refusing = new Set(config2.routes);
@@ -878,6 +913,14 @@ function routeRules(config2) {
   }
   for (const e of config2.monitor_routes ?? []) {
     rules.push({ pattern: e.pattern, min_trust: e.min_trust, mode: "monitor", exceptions: e.except });
+  }
+  for (const e of config2.route_refusals ?? []) {
+    if (!Array.isArray(e.refuse_behaviors) || e.refuse_behaviors.length === 0) continue;
+    if (e.mode === "monitor") {
+      rules.push({ pattern: e.pattern, mode: "monitor", refuse_behaviors: e.refuse_behaviors });
+    } else if (refusing.has(e.pattern)) {
+      rules.push({ pattern: e.pattern, exceptions: except.get(e.pattern), refuse_behaviors: e.refuse_behaviors });
+    }
   }
   return rules;
 }
@@ -1122,6 +1165,7 @@ function challenge(request, apiBase, siteKey) {
     }
   });
 }
+var CHALLENGE_LOGO_URL = "https://cdn.webdecoy.com/wordpress/assets/icon-128x128.png";
 function challengePage(apiBase, siteKey) {
   return `<!doctype html>
 <html lang="en">
@@ -1133,17 +1177,24 @@ function challengePage(apiBase, siteKey) {
   body { font-family: system-ui, sans-serif; display: flex; align-items: center;
          justify-content: center; min-height: 100vh; margin: 0; background: #0b0e14; color: #e6e6e6; }
   .box { text-align: center; max-width: 24rem; padding: 2rem; }
+  .brand { display: flex; align-items: center; justify-content: center; gap: 0.6rem; margin-bottom: 1.5rem;
+           font-weight: 600; font-size: 1rem; letter-spacing: 0.01em; }
+  .brand img { width: 2.25rem; height: 2.25rem; border-radius: 0.5rem; }
   .spin { width: 2rem; height: 2rem; margin: 0 auto 1rem; border: 3px solid #2a2f3a;
-          border-top-color: #22d3ee; border-radius: 50%; animation: r 0.8s linear infinite; }
+          border-top-color: #f90289; border-radius: 50%; animation: r 0.8s linear infinite; }
   @keyframes r { to { transform: rotate(360deg); } }
   p { color: #9aa4b2; font-size: 0.9rem; line-height: 1.5; }
+  .foot { margin-top: 2rem; font-size: 0.75rem; color: #6b7280; }
+  .foot a { color: #9aa4b2; text-decoration: none; }
 </style>
 </head>
 <body>
 <div class="box">
+  <div class="brand"><img src="${CHALLENGE_LOGO_URL}" alt="" width="36" height="36">WebDecoy</div>
   <div class="spin" id="spin"></div>
   <h1 style="font-size:1.1rem">Checking your browser</h1>
   <p id="msg">This takes a moment and happens only once.</p>
+  <p class="foot">This site is protected by <a href="https://webdecoy.com" rel="noopener">WebDecoy</a>.</p>
 </div>
 <script>
 ${DEVICE_FP_JS}
@@ -1258,7 +1309,8 @@ var VALIDATOR_CAPABILITIES = [
   "monitor_routes",
   "route_exceptions",
   "bot_behaviors",
-  "credential_reach"
+  "credential_reach",
+  "route_refusals"
 ];
 
 // ../clearance-worker/src/telemetry.ts
@@ -1624,7 +1676,7 @@ async function forwardWithVerdict(request, context, verdict) {
 }
 
 // src/sensor/build.ts
-var BUILD = "netlify-9602bfb1edb9";
+var BUILD = "netlify-07f9a23d7156";
 
 // src/sensor/entry.ts
 var DEFAULT_INGEST = "https://in.webdecoy.com";

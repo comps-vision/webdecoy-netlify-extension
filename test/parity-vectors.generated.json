@@ -84,13 +84,13 @@
     "matched": true
   },
   {
-    "userAgent": "anthropic",
+    "userAgent": "anthropic-ai",
     "id": "anthropic",
     "category": "training_crawler",
     "matched": true
   },
   {
-    "userAgent": "Mozilla/5.0 (compatible; anthropic/1.0; +http://example.com/bot)",
+    "userAgent": "Mozilla/5.0 (compatible; anthropic-ai/1.0; +http://example.com/bot)",
     "id": "anthropic",
     "category": "training_crawler",
     "matched": true
@@ -362,25 +362,25 @@
   {
     "userAgent": "chatgpt-user",
     "id": "chatgpt-user",
-    "category": "training_crawler",
+    "category": "ai_assistant",
     "matched": true
   },
   {
     "userAgent": "Mozilla/5.0 (compatible; chatgpt-user/1.0; +http://example.com/bot)",
     "id": "chatgpt-user",
-    "category": "training_crawler",
+    "category": "ai_assistant",
     "matched": true
   },
   {
-    "userAgent": "chatgpt",
-    "id": "chatgpt-user",
-    "category": "training_crawler",
+    "userAgent": "claude-searchbot",
+    "id": "claude-searchbot",
+    "category": "ai_search_crawler",
     "matched": true
   },
   {
-    "userAgent": "Mozilla/5.0 (compatible; chatgpt/1.0; +http://example.com/bot)",
-    "id": "chatgpt-user",
-    "category": "training_crawler",
+    "userAgent": "Mozilla/5.0 (compatible; claude-searchbot/1.0; +http://example.com/bot)",
+    "id": "claude-searchbot",
+    "category": "ai_search_crawler",
     "matched": true
   },
   {
@@ -393,6 +393,18 @@
     "userAgent": "Mozilla/5.0 (compatible; claude-user/1.0; +http://example.com/bot)",
     "id": "claude-user",
     "category": "ai_agent",
+    "matched": true
+  },
+  {
+    "userAgent": "claude-web",
+    "id": "claude-web",
+    "category": "training_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; claude-web/1.0; +http://example.com/bot)",
+    "id": "claude-web",
+    "category": "training_crawler",
     "matched": true
   },
   {
@@ -672,6 +684,18 @@
     "matched": true
   },
   {
+    "userAgent": "facebot",
+    "id": "facebot",
+    "category": "fetcher",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; facebot/1.0; +http://example.com/bot)",
+    "id": "facebot",
+    "category": "fetcher",
+    "matched": true
+  },
+  {
     "userAgent": "faraday",
     "id": "faraday",
     "category": "generic_scraper",
@@ -692,6 +716,18 @@
   {
     "userAgent": "Mozilla/5.0 (compatible; feedbin/1.0; +http://example.com/bot)",
     "id": "feedbin",
+    "category": "feed_reader",
+    "matched": true
+  },
+  {
+    "userAgent": "feedfetcher",
+    "id": "feedfetcher-google",
+    "category": "feed_reader",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; feedfetcher/1.0; +http://example.com/bot)",
+    "id": "feedfetcher-google",
     "category": "feed_reader",
     "matched": true
   },
@@ -756,6 +792,18 @@
     "matched": true
   },
   {
+    "userAgent": "gtmetrix",
+    "id": "gtmetrix",
+    "category": "monitoring",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; gtmetrix/1.0; +http://example.com/bot)",
+    "id": "gtmetrix",
+    "category": "monitoring",
+    "matched": true
+  },
+  {
     "userAgent": "gemini",
     "id": "gemini",
     "category": "training_crawler",
@@ -813,6 +861,18 @@
     "userAgent": "Mozilla/5.0 (compatible; google-extended/1.0; +http://example.com/bot)",
     "id": "google-extended",
     "category": "training_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "google-inspectiontool",
+    "id": "google-inspectiontool",
+    "category": "search_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; google-inspectiontool/1.0; +http://example.com/bot)",
+    "id": "google-inspectiontool",
+    "category": "search_crawler",
     "matched": true
   },
   {
@@ -1068,6 +1128,30 @@
     "matched": true
   },
   {
+    "userAgent": "chrome-lighthouse",
+    "id": "chrome-lighthouse",
+    "category": "monitoring",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; chrome-lighthouse/1.0; +http://example.com/bot)",
+    "id": "chrome-lighthouse",
+    "category": "monitoring",
+    "matched": true
+  },
+  {
+    "userAgent": "google page speed",
+    "id": "chrome-lighthouse",
+    "category": "monitoring",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; google page speed/1.0; +http://example.com/bot)",
+    "id": "chrome-lighthouse",
+    "category": "monitoring",
+    "matched": true
+  },
+  {
     "userAgent": "linkedinbot",
     "id": "linkedinbot",
     "category": "fetcher",
@@ -1104,6 +1188,18 @@
     "matched": true
   },
   {
+    "userAgent": "msnbot",
+    "id": "msnbot",
+    "category": "search_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; msnbot/1.0; +http://example.com/bot)",
+    "id": "msnbot",
+    "category": "search_crawler",
+    "matched": true
+  },
+  {
     "userAgent": "mechanize",
     "id": "mechanize",
     "category": "generic_scraper",
@@ -1125,6 +1221,18 @@
     "userAgent": "Mozilla/5.0 (compatible; meta-externalagent/1.0; +http://example.com/bot)",
     "id": "meta-externalagent",
     "category": "training_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "meta-externalfetcher",
+    "id": "meta-externalfetcher",
+    "category": "ai_assistant",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; meta-externalfetcher/1.0; +http://example.com/bot)",
+    "id": "meta-externalfetcher",
+    "category": "ai_assistant",
     "matched": true
   },
   {
@@ -1164,13 +1272,25 @@
     "matched": true
   },
   {
-    "userAgent": "mistral",
+    "userAgent": "mistralai-user",
+    "id": "mistralai-user",
+    "category": "ai_assistant",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; mistralai-user/1.0; +http://example.com/bot)",
+    "id": "mistralai-user",
+    "category": "ai_assistant",
+    "matched": true
+  },
+  {
+    "userAgent": "mistralbot",
     "id": "mistral",
     "category": "training_crawler",
     "matched": true
   },
   {
-    "userAgent": "Mozilla/5.0 (compatible; mistral/1.0; +http://example.com/bot)",
+    "userAgent": "Mozilla/5.0 (compatible; mistralbot/1.0; +http://example.com/bot)",
     "id": "mistral",
     "category": "training_crawler",
     "matched": true
@@ -1334,13 +1454,13 @@
   {
     "userAgent": "oai-searchbot",
     "id": "oai-searchbot",
-    "category": "training_crawler",
+    "category": "ai_search_crawler",
     "matched": true
   },
   {
     "userAgent": "Mozilla/5.0 (compatible; oai-searchbot/1.0; +http://example.com/bot)",
     "id": "oai-searchbot",
-    "category": "training_crawler",
+    "category": "ai_search_crawler",
     "matched": true
   },
   {
@@ -1428,15 +1548,27 @@
     "matched": true
   },
   {
+    "userAgent": "perplexity-user",
+    "id": "perplexity-user",
+    "category": "ai_assistant",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; perplexity-user/1.0; +http://example.com/bot)",
+    "id": "perplexity-user",
+    "category": "ai_assistant",
+    "matched": true
+  },
+  {
     "userAgent": "perplexitybot",
     "id": "perplexitybot",
-    "category": "training_crawler",
+    "category": "ai_search_crawler",
     "matched": true
   },
   {
     "userAgent": "Mozilla/5.0 (compatible; perplexitybot/1.0; +http://example.com/bot)",
     "id": "perplexitybot",
-    "category": "training_crawler",
+    "category": "ai_search_crawler",
     "matched": true
   },
   {
