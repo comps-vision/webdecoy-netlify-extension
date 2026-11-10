@@ -77,7 +77,7 @@ async function verdictFor(v: Vector, mode: 'monitor' | 'enforce'): Promise<{ lab
   const handler = makeHandler((name) => ENV[name], fetch as typeof fetch);
 
   const headers: Record<string, string> = {
-    accept: 'text/html',
+    accept: 'application/json',
     'user-agent': v.verified_crawler ? crawler.user_agent : BROWSER_UA,
     ...(v.headers ?? {}),
   };
@@ -97,6 +97,11 @@ async function verdictFor(v: Vector, mode: 'monitor' | 'enforce'): Promise<{ lab
   const result = await handler(new Request(`https://v${hosts}.example${v.path}`, { headers }), context);
   const response = result as Response | undefined;
   const refused = response?.status === 403;
+  if (refused) {
+    expect(response!.headers.get('x-wd-challenge')).toBe('1');
+    expect(response!.headers.get('cache-control')).toBe('no-store');
+    expect(await response!.json()).toEqual({ error: 'clearance required', challenge: { version: 1, reason: v.want.label, recoverable: ['missing', 'invalid', 'insufficient-trust'].includes(v.want.label) } });
+  }
   return { label: forwarded?.headers.get('x-wd-clearance') ?? (refused ? 'challenged' : ''), refused };
 }
 

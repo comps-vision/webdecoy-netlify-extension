@@ -740,13 +740,70 @@ function rank(grade2) {
 function grade(r) {
   return r > 0 ? Object.keys(TRUST_RANK).find((g) => TRUST_RANK[g] === r) ?? "" : "";
 }
-function patternMatches(path, pattern) {
-  if (pattern.endsWith("/*")) {
-    const base = pattern.slice(0, -2);
-    if (base === "") return true;
-    return path === base || path.startsWith(base + "/");
+function normalizeMatchPath(s) {
+  s = decodePercentAscii(s);
+  s = cleanSlashesAndDots(s);
+  return s.toLowerCase();
+}
+function decodePercentAscii(s) {
+  for (let i = 0; i < 4; i++) {
+    const next = decodePercentAsciiOnce(s);
+    if (next === s) break;
+    s = next;
   }
-  return path === pattern;
+  return s;
+}
+function decodePercentAsciiOnce(s) {
+  if (!s.includes("%")) return s;
+  let out = "";
+  for (let i = 0; i < s.length; i++) {
+    if (s[i] === "%" && i + 2 < s.length) {
+      const hi = unhexNibble(s.charCodeAt(i + 1));
+      const lo = unhexNibble(s.charCodeAt(i + 2));
+      if (hi >= 0 && lo >= 0) {
+        const v = hi << 4 | lo;
+        if (v < 128) {
+          out += String.fromCharCode(v);
+          i += 2;
+          continue;
+        }
+      }
+    }
+    out += s[i];
+  }
+  return out;
+}
+function unhexNibble(c) {
+  if (c >= 48 && c <= 57) return c - 48;
+  if (c >= 97 && c <= 102) return c - 97 + 10;
+  if (c >= 65 && c <= 70) return c - 65 + 10;
+  return -1;
+}
+function cleanSlashesAndDots(s) {
+  if (s === "") return s;
+  const hadTrailing = s.length > 1 && s[s.length - 1] === "/";
+  const stack = [];
+  for (const p of s.split("/")) {
+    if (p === "" || p === ".") continue;
+    if (p === "..") {
+      if (stack.length > 0) stack.pop();
+      continue;
+    }
+    stack.push(p);
+  }
+  let res = "/" + stack.join("/");
+  if (hadTrailing && res !== "/") res += "/";
+  return res;
+}
+function patternMatches(path, pattern) {
+  const np = normalizeMatchPath(path);
+  const pat = normalizeMatchPath(pattern);
+  if (pat.endsWith("/*")) {
+    const base = pat.slice(0, -2);
+    if (base === "") return true;
+    return np === base || np.startsWith(base + "/");
+  }
+  return np === pat;
 }
 function specificity(pattern) {
   return pattern.endsWith("/*") ? pattern.length - 2 : 1 << 20;
@@ -869,14 +926,7 @@ function legacyKeyAllowedByBehaviors(key, behaviors) {
 }
 
 // ../clearance-worker/src/credential-reach.ts
-function matchesReachPath(path, pattern) {
-  if (pattern.endsWith("/*")) {
-    const base = pattern.slice(0, -2);
-    if (base === "") return true;
-    return path === base || path.startsWith(base + "/");
-  }
-  return path === pattern;
-}
+var matchesReachPath = patternMatches;
 function credentialGrants(here, paths, path) {
   if (!here) return false;
   if (!paths) return true;
@@ -1041,6 +1091,12 @@ function isAllowedBotCategory(category, allow) {
   if (allow.monitoring && c.includes("monitoring")) return true;
   return false;
 }
+function outagePassApplies(verdict) {
+  return !verdict.pass && verdict.mode === "enforce" && (verdict.label === "missing" || verdict.label === "invalid");
+}
+function withOutagePass(verdict) {
+  return outagePassApplies(verdict) ? { ...verdict, pass: true, label: "outage-pass" } : verdict;
+}
 function readCookie(header, name) {
   for (const part of header.split(";")) {
     const eq = part.indexOf("=");
@@ -1087,6 +1143,96 @@ function bytesOf(bin) {
   const out = new Uint8Array(new ArrayBuffer(bin.length));
   for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
   return out;
+}
+
+// ../clearance-worker/src/outage-pass.ts
+var OUTAGE_PATH = "/.well-known/wd-clearance/outage";
+var OUTAGE_COOKIE = "wd_outage";
+var PASS_TTL_SECONDS = 300;
+var PROBE_CACHE_MS = 3e4;
+var PROBE_TIMEOUT_MS = 3e3;
+var PASS_VERSION = "wd-outage-v1";
+var probe = null;
+var probeInFlight = null;
+async function mintAvailable(apiBase, siteKey, now, fetchImpl = fetch) {
+  if (probe && now - probe.at < PROBE_CACHE_MS) return probe.available;
+  if (probeInFlight) return probeInFlight;
+  probeInFlight = (async () => {
+    let available = false;
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), PROBE_TIMEOUT_MS);
+      try {
+        const res = await fetchImpl(apiBase.replace(/\/+$/, "") + "/api/v1/clearance", {
+          method: "POST",
+          headers: { "content-type": "application/json", "user-agent": "WebDecoy-OutageProbe/1" },
+          body: JSON.stringify({ aid: siteKey, fp: "wd-outage-probe", scope: "", ua: "WebDecoy-OutageProbe/1" }),
+          signal: controller.signal
+        });
+        if (res.status === 429) {
+          available = true;
+        } else if (res.status < 300) {
+          const out = await res.json();
+          available = typeof out?.granted === "boolean";
+        }
+      } finally {
+        clearTimeout(timer);
+      }
+    } catch {
+      available = false;
+    }
+    probe = { at: now, available };
+    return available;
+  })();
+  try {
+    return await probeInFlight;
+  } finally {
+    probeInFlight = null;
+  }
+}
+function b64url(bytes) {
+  let s = "";
+  for (const b of new Uint8Array(bytes)) s += String.fromCharCode(b);
+  return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+async function sign(key, message) {
+  const k = await crypto.subtle.importKey("raw", new TextEncoder().encode(key), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  return b64url(await crypto.subtle.sign("HMAC", k, new TextEncoder().encode(message)));
+}
+async function uaHash(ua) {
+  return b64url(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(ua))).slice(0, 16);
+}
+function passMessage(host, exp, ua) {
+  return `${PASS_VERSION}|${host}|${exp}|${ua}`;
+}
+async function issuePass(sensorKey, host, ua, nowMs) {
+  const exp = Math.floor(nowMs / 1e3) + PASS_TTL_SECONDS;
+  return `${exp}.${await sign(sensorKey, passMessage(host, exp, await uaHash(ua)))}`;
+}
+async function verifyPass(value, sensorKey, host, ua, nowMs) {
+  if (!sensorKey || !value) return false;
+  const dot = value.indexOf(".");
+  if (dot <= 0) return false;
+  const exp = Number(value.slice(0, dot));
+  if (!Number.isInteger(exp) || exp <= Math.floor(nowMs / 1e3) || exp > Math.floor(nowMs / 1e3) + PASS_TTL_SECONDS) return false;
+  const want = await sign(sensorKey, passMessage(host, exp, await uaHash(ua)));
+  const got = value.slice(dot + 1);
+  if (got.length !== want.length) return false;
+  let diff = 0;
+  for (let i = 0; i < want.length; i++) diff |= want.charCodeAt(i) ^ got.charCodeAt(i);
+  return diff === 0;
+}
+async function handleOutage(request, opts, now = Date.now(), fetchImpl = fetch) {
+  const json = (status, body, headers = {}) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json", "cache-control": "no-store", ...headers } });
+  if (request.method !== "POST") return json(405, { pass: false });
+  if (!opts.sensorKey) return json(503, { pass: false, reason: "unsupported" });
+  if (await mintAvailable(opts.apiBase, opts.siteKey, now, fetchImpl)) {
+    return json(409, { pass: false, reason: "mint_available" });
+  }
+  const value = await issuePass(opts.sensorKey, opts.host, request.headers.get("user-agent") ?? "", now);
+  return json(200, { pass: true, expires_in: PASS_TTL_SECONDS }, {
+    "set-cookie": `${OUTAGE_COOKIE}=${value}; Path=/; Secure; SameSite=Lax; HttpOnly; Max-Age=${PASS_TTL_SECONDS}`
+  });
 }
 
 // ../clearance-worker/src/device-fp.ts
@@ -1140,6 +1286,27 @@ async function wdDeviceFP() {
 }
 `;
 
+// ../clearance-worker/src/challenge-contract.ts
+function challengeContract(label) {
+  const known = ["missing", "invalid", "insufficient-trust", "revoked", "crawler-refused", "agent-impersonation"];
+  const reason = known.includes(label) ? label : "denied";
+  return {
+    version: 1,
+    reason,
+    recoverable: reason === "missing" || reason === "invalid" || reason === "insufficient-trust"
+  };
+}
+function challengeHeaders(label) {
+  const contract = challengeContract(label);
+  return {
+    "cache-control": "no-store",
+    "x-wd-clearance": "challenged",
+    "x-wd-challenge": String(contract.version),
+    "x-wd-challenge-reason": contract.reason,
+    "x-wd-challenge-recoverable": String(contract.recoverable)
+  };
+}
+
 // ../clearance-worker/src/validator-parts.ts
 var CONFIG_TTL_MS = 6e4;
 var VERDICT_HEADER = "x-wd-clearance";
@@ -1148,6 +1315,51 @@ var HEALTHCHECK_PARAM = "__wd_clearance_check";
 var PAT_PATH = "/.well-known/wd-clearance/pat";
 var configCache = /* @__PURE__ */ new Map();
 var MAX_CACHED_CONFIGS = 16;
+var CONFIG_FAILURE_BACKOFF_MS = 3e4;
+var MAX_RETRY_AFTER_MS = 3e5;
+var configRetryAt = /* @__PURE__ */ new Map();
+var configInFlight = /* @__PURE__ */ new Map();
+var LAST_GOOD_TTL_S = 86400;
+function lastGoodKey(siteKey, host) {
+  return `https://wd-config.invalid/${encodeURIComponent(siteKey)}/${encodeURIComponent(host)}`;
+}
+function edgeCache() {
+  try {
+    const c = globalThis.caches;
+    return c?.default ?? null;
+  } catch {
+    return null;
+  }
+}
+async function readLastGood(siteKey, host) {
+  const cache2 = edgeCache();
+  if (!cache2) return null;
+  try {
+    const hit = await cache2.match(lastGoodKey(siteKey, host));
+    return hit ? await hit.json() : null;
+  } catch {
+    return null;
+  }
+}
+async function writeLastGood(siteKey, host, config2) {
+  const cache2 = edgeCache();
+  if (!cache2) return;
+  try {
+    await cache2.put(
+      lastGoodKey(siteKey, host),
+      new Response(JSON.stringify(config2), {
+        headers: { "content-type": "application/json", "cache-control": `max-age=${LAST_GOOD_TTL_S}` }
+      })
+    );
+  } catch {
+  }
+}
+function backoffFor(res) {
+  const ra = res?.headers.get("retry-after");
+  const s = ra ? Number(ra) : NaN;
+  if (Number.isFinite(s) && s > 0) return Math.min(Math.max(s * 1e3, 5e3), MAX_RETRY_AFTER_MS);
+  return CONFIG_FAILURE_BACKOFF_MS;
+}
 async function getConfig(env, host) {
   const now = Date.now();
   const key = host;
@@ -1155,6 +1367,24 @@ async function getConfig(env, host) {
   if (cached && now - cached.at < CONFIG_TTL_MS) {
     return cached.config;
   }
+  const retryAt = configRetryAt.get(key);
+  if (retryAt !== void 0 && now < retryAt) {
+    return cached?.config ?? await readLastGood(env.siteKey, host);
+  }
+  const pending = configInFlight.get(key);
+  if (pending) {
+    return cached?.config ?? pending;
+  }
+  const run = fetchConfig(env, host, key, now, cached?.config ?? null);
+  configInFlight.set(key, run);
+  try {
+    return await run;
+  } finally {
+    configInFlight.delete(key);
+  }
+}
+async function fetchConfig(env, host, key, now, stale) {
+  let res = null;
   try {
     let url = `${env.apiBase}/api/v1/clearance/config?aid=${encodeURIComponent(env.siteKey)}`;
     if (env.propertyId) {
@@ -1163,20 +1393,22 @@ async function getConfig(env, host) {
     if (host) {
       url += `&host=${encodeURIComponent(host)}`;
     }
-    const res = await fetch(url, { signal: AbortSignal.timeout(3e3) });
-    if (!res.ok) {
-      return cached?.config ?? null;
+    res = await fetch(url, { signal: AbortSignal.timeout(3e3) });
+    if (res.ok) {
+      const config2 = await res.json();
+      configRetryAt.delete(key);
+      configCache.set(key, { config: config2, at: now });
+      if (configCache.size > MAX_CACHED_CONFIGS) {
+        const oldest = configCache.keys().next();
+        if (!oldest.done) configCache.delete(oldest.value);
+      }
+      await writeLastGood(env.siteKey, host, config2);
+      return config2;
     }
-    const config2 = await res.json();
-    configCache.set(key, { config: config2, at: now });
-    if (configCache.size > MAX_CACHED_CONFIGS) {
-      const oldest = configCache.keys().next();
-      if (!oldest.done) configCache.delete(oldest.value);
-    }
-    return config2;
   } catch {
-    return cached?.config ?? null;
   }
+  configRetryAt.set(key, now + backoffFor(res));
+  return stale ?? await readLastGood(env.siteKey, host);
 }
 function healthResponse(nonce, mode, siteKey, capabilities) {
   return new Response(
@@ -1194,6 +1426,7 @@ function healthResponse(nonce, mode, siteKey, capabilities) {
     }
   );
 }
+var PAT_TIMEOUT_MS = 3e3;
 async function proxyPAT(request, apiBase) {
   const fp = new URL(request.url).searchParams.get("fp") ?? "";
   const upstream = `${apiBase}/api/v1/clearance/pat?fp=${encodeURIComponent(fp)}`;
@@ -1204,7 +1437,7 @@ async function proxyPAT(request, apiBase) {
   }
   let res;
   try {
-    res = await fetch(upstream, { method: "GET", headers, redirect: "manual" });
+    res = await fetch(upstream, { method: "GET", headers, redirect: "manual", signal: AbortSignal.timeout(PAT_TIMEOUT_MS) });
   } catch {
     return new Response(JSON.stringify({ attested: false, reason: "unreachable" }), {
       status: 200,
@@ -1231,12 +1464,12 @@ function withoutClientTags(request) {
   headers.delete(VERDICT_HEADER);
   return new Request(request, { headers });
 }
-function challenge(request, apiBase, siteKey) {
+function challenge(request, apiBase, siteKey, reason = "denied") {
   const accept = request.headers.get("accept") ?? "";
   if (request.method !== "GET" || !accept.includes("text/html")) {
-    return new Response(JSON.stringify({ error: "clearance required" }), {
+    return new Response(JSON.stringify({ error: "clearance required", challenge: challengeContract(reason) }), {
       status: 403,
-      headers: { "content-type": "application/json", [VERDICT_HEADER]: "challenged" }
+      headers: { "content-type": "application/json", ...challengeHeaders(reason) }
     });
   }
   const html = challengePage(apiBase, siteKey);
@@ -1346,29 +1579,59 @@ ${DEVICE_FP_JS}
       }
     } catch (e) { /* unsupported or unreachable \u2014 proceed unattested */ }
 
-    var res = await fetch(${JSON.stringify(apiBase)} + '/api/v1/clearance', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        aid: ${JSON.stringify(siteKey)},
-        fp: fp,
-        scope: '',
-        ua: navigator.userAgent,
-        webdriver: integrity.webdriver,
-        headless: integrity.headless_ua,
-        integrity: integrity,
-        pat_receipt: patReceipt
-      })
+    var mintBody = JSON.stringify({
+      aid: ${JSON.stringify(siteKey)},
+      fp: fp,
+      scope: '',
+      ua: navigator.userAgent,
+      webdriver: integrity.webdriver,
+      headless: integrity.headless_ua,
+      integrity: integrity,
+      pat_receipt: patReceipt
     });
-    var out = await res.json();
-    if (out && out.granted && out.token) {
-      document.cookie = 'wd_clearance=' + out.token +
-        '; path=/; secure; samesite=lax; max-age=' + (out.expires_in || 1800);
-      location.reload();
-      return;
+    // Mint, retrying only when WebDecoy could not be reached (#1245): a network
+    // error, a timeout, 429 or 5xx. An ANSWER of "not granted" is a refusal and
+    // is never retried or bypassed.
+    var waits = [0, 1500, 4000];
+    for (var attempt = 0; attempt < waits.length; attempt++) {
+      if (waits[attempt]) await new Promise(function (r) { setTimeout(r, waits[attempt]); });
+      var out = null;
+      try {
+        var ctl = new AbortController();
+        var timer = setTimeout(function () { ctl.abort(); }, 4000);
+        var res = await fetch(${JSON.stringify(apiBase)} + '/api/v1/clearance', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: mintBody,
+          signal: ctl.signal
+        });
+        clearTimeout(timer);
+        if (res.ok) out = await res.json();
+      } catch (e) { out = null; }
+      if (out && out.granted && out.token) {
+        document.cookie = 'wd_clearance=' + out.token +
+          '; path=/; secure; samesite=lax; max-age=' + (out.expires_in || 1800);
+        location.reload();
+        return;
+      }
+      if (out && out.granted === false) {
+        document.getElementById('spin').style.display = 'none';
+        msg.textContent = 'Verification did not pass. If you believe this is an error, contact the site owner.';
+        return;
+      }
     }
+    // WebDecoy could not mint at all. The site owner chose to let visitors
+    // through in that case; the validator confirms the outage itself before it
+    // signs a short pass, so this cannot be used while minting works.
+    try {
+      var pass = await fetch(${JSON.stringify(OUTAGE_PATH)}, { method: 'POST', credentials: 'same-origin' });
+      if (pass.ok) {
+        var passOut = await pass.json();
+        if (passOut && passOut.pass) { location.reload(); return; }
+      }
+    } catch (e) { /* fall through to the retry message */ }
     document.getElementById('spin').style.display = 'none';
-    msg.textContent = 'Verification did not pass. If you believe this is an error, contact the site owner.';
+    msg.textContent = 'Verification could not complete. Please retry shortly.';
   } catch (e) {
     document.getElementById('spin').style.display = 'none';
     msg.textContent = 'Verification could not complete. Please retry shortly.';
@@ -1407,8 +1670,11 @@ var ROUTE_ENTRY_OVERHEAD = 40;
 var PREVIEW_ENTRY_OVERHEAD = 60;
 var PREVIEW_CAUSE_OVERHEAD = 16;
 var utf8 = new TextEncoder();
+var REFUSAL_ENTRY_BYTES = 60;
+var REFUSAL_KEY_HEX = 24;
 var SEND_TIMEOUT_MS = 3e3;
 var MAX_HOLD_MS = 2e4;
+var FLUSH_JITTER_MS = 1e4;
 var MAX_PENDING_WINDOWS = 16;
 var pendingWindows = /* @__PURE__ */ new Map();
 function windowKey(bucketStart, mode, host) {
@@ -1451,6 +1717,7 @@ function recordVerdict(verdict, host, reporter, ctx, now = Date.now()) {
         previews: /* @__PURE__ */ new Map(),
         credentials: /* @__PURE__ */ new Map(),
         referrals: /* @__PURE__ */ new Map(),
+        refusals: [],
         routeBytes: 0,
         total: 0
       };
@@ -1501,6 +1768,11 @@ ${referral.path}`;
         win.routeBytes += utf8.encode(referral.platform).length + utf8.encode(referral.path).length + ROUTE_ENTRY_OVERHEAD;
       }
     }
+    const refusal = verdict?.refusal;
+    if (refusal && typeof refusal.ip === "string" && refusal.ip && typeof refusal.path === "string" && refusal.path.startsWith("/")) {
+      win.refusals.push({ ip: refusal.ip, path: refusal.path, at: Math.floor(now / 1e3), verdict: label });
+      win.routeBytes += REFUSAL_ENTRY_BYTES;
+    }
     win.total++;
     if (win.total >= MAX_PER_WINDOW || win.routeBytes >= MAX_ROUTE_BYTES) {
       flush(win, reporter, ctx);
@@ -1512,7 +1784,8 @@ ${referral.path}`;
 function scheduleFlush(key, win, reporter, ctx, now) {
   try {
     const windowEnd = (win.bucketStart + WINDOW_SECONDS) * 1e3;
-    const delay = Math.max(0, Math.min(windowEnd - now, MAX_HOLD_MS));
+    const jitter = Math.floor(Math.random() * FLUSH_JITTER_MS);
+    const delay = Math.max(0, Math.min(windowEnd - now + jitter, MAX_HOLD_MS));
     ctx.waitUntil(
       new Promise((resolve) => {
         setTimeout(() => {
@@ -1577,8 +1850,13 @@ function flush(win, reporter, ctx) {
     const authenticated = Boolean(reporter.scannerId && reporter.sensorKey);
     if (authenticated) report.scanner_id = reporter.scannerId;
     report.capabilities = reporter.capabilities ?? VALIDATOR_CAPABILITIES;
+    const refusals = authenticated ? win.refusals : [];
+    const sendReport = () => send(reporter.apiBase, JSON.stringify(report), authenticated ? reporter.sensorKey : void 0);
+    const sent = refusals.length === 0 ? sendReport() : refusalKeys(reporter.siteKey, refusals).then((keys) => {
+      report.refusals = keys;
+    }).catch(() => void 0).then(sendReport);
     ctx.waitUntil(
-      send(reporter.apiBase, JSON.stringify(report), authenticated ? reporter.sensorKey : void 0).then(
+      sent.then(
         () => void 0,
         () => void 0
         // network error, timeout, abort — all equally ignorable
@@ -1586,6 +1864,17 @@ function flush(win, reporter, ctx) {
     );
   } catch {
   }
+}
+async function refusalKey(siteKey, ip, path) {
+  const digest = await crypto.subtle.digest("SHA-256", utf8.encode(`${siteKey.toLowerCase()}|${ip}|${path}`));
+  let hex = "";
+  for (const b of new Uint8Array(digest)) hex += b.toString(16).padStart(2, "0");
+  return hex.slice(0, REFUSAL_KEY_HEX);
+}
+async function refusalKeys(siteKey, refusals) {
+  const out = [];
+  for (const r of refusals) out.push({ k: await refusalKey(siteKey, r.ip, r.path), t: r.at, v: r.verdict });
+  return out;
 }
 async function send(apiBase, body, sensorKey) {
   const controller = new AbortController();
@@ -1738,13 +2027,22 @@ async function runGate(request, context, env) {
     if (url.pathname === PAT_PATH) {
       return proxyPAT(request, env.ingest);
     }
+    if (url.pathname === OUTAGE_PATH) {
+      return handleOutage(request, { apiBase: env.ingest, siteKey: env.siteKey, sensorKey: env.sensorKey, host: requestHost });
+    }
     if (!config2) return void 0;
-    const verdict = await evaluate(request, config2, {
+    let verdict = await evaluate(request, config2, {
       siteKey: env.siteKey,
       // Netlify verifies crawlers itself, and pays a DNS round trip for the
       // answer, so it is asked for only where it can change one (#1187).
       verifiedBotCategory: (req, covered) => verifiedBotCategory(context.ip ?? "", req.headers.get("user-agent") ?? "", covered)
     });
+    if (outagePassApplies(verdict)) {
+      const pass = readCookie(request.headers.get("cookie") ?? "", OUTAGE_COOKIE);
+      if (pass && await verifyPass(pass, env.sensorKey, requestHost, request.headers.get("user-agent") ?? "", Date.now())) {
+        verdict = withOutagePass(verdict);
+      }
+    }
     recordVerdict(
       // The whole verdict: this validator applies every rule the Worker's
       // decision applies, so it reports everything that decision carries,
@@ -1765,7 +2063,7 @@ async function runGate(request, context, env) {
     if (verdict.pass || verdict.mode !== "enforce") {
       return forwardWithVerdict(request, context, verdict.label);
     }
-    return challenge(request, env.ingest, env.siteKey);
+    return challenge(request, env.ingest, env.siteKey, verdict.label);
   } catch {
     return void 0;
   }
@@ -1784,7 +2082,7 @@ async function forwardWithVerdict(request, context, verdict) {
 }
 
 // src/sensor/build.ts
-var BUILD = "netlify-6e6b4ede00f5";
+var BUILD = "netlify-9bab77a02087";
 
 // src/sensor/entry.ts
 var DEFAULT_INGEST = "https://in.webdecoy.com";

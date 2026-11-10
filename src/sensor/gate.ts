@@ -19,7 +19,8 @@
  * and an outage.
  */
 
-import { evaluate } from '../../../clearance-worker/src/decision';
+import { evaluate, readCookie, outagePassApplies, withOutagePass } from '../../../clearance-worker/src/decision';
+import { OUTAGE_PATH, OUTAGE_COOKIE, handleOutage, verifyPass } from '../../../clearance-worker/src/outage-pass';
 import {
   getConfig,
   healthResponse,
@@ -87,9 +88,16 @@ export async function runGate(
       return proxyPAT(request, env.ingest);
     }
 
+    // Outage pass (#1245): the shared challenge page asks for one when
+    // WebDecoy could not mint clearance. Answered before the gate, like the
+    // PAT proxy, and issued only when this validator's own probe finds minting down.
+    if (url.pathname === OUTAGE_PATH) {
+      return handleOutage(request, { apiBase: env.ingest, siteKey: env.siteKey, sensorKey: env.sensorKey, host: requestHost });
+    }
+
     if (!config) return undefined; // config unreachable -> the chain continues
 
-    const verdict = await evaluate(request, config, {
+    let verdict = await evaluate(request, config, {
       siteKey: env.siteKey,
       // Netlify verifies crawlers itself, and pays a DNS round trip for the
       // answer, so it is asked for only where it can change one (#1187).
@@ -100,6 +108,15 @@ export async function runGate(
     // The return path (#435, #1189). Same contract as on the Worker: returns
     // void, throws nothing, sends inside waitUntil. Deleting this call must
     // leave the gate's behaviour identical.
+    // A verified outage pass stands in for a missing or invalid token on an
+    // enforcing route, reported as `outage-pass` (#1245).
+    if (outagePassApplies(verdict)) {
+      const pass = readCookie(request.headers.get('cookie') ?? '', OUTAGE_COOKIE);
+      if (pass && (await verifyPass(pass, env.sensorKey, requestHost, request.headers.get('user-agent') ?? '', Date.now()))) {
+        verdict = withOutagePass(verdict);
+      }
+    }
+
     recordVerdict(
       // The whole verdict: this validator applies every rule the Worker's
       // decision applies, so it reports everything that decision carries,
@@ -121,7 +138,7 @@ export async function runGate(
     if (verdict.pass || verdict.mode !== 'enforce') {
       return forwardWithVerdict(request, context, verdict.label);
     }
-    return challenge(request, env.ingest, env.siteKey);
+    return challenge(request, env.ingest, env.siteKey, verdict.label);
   } catch {
     // Fail open, always.
     return undefined;

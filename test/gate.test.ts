@@ -169,7 +169,8 @@ describe('a site that opted in', () => {
       ctx()
     )) as Response;
     expect(res.status).toBe(403);
-    expect(await res.json()).toEqual({ error: 'clearance required' });
+    expect(res.headers.get('x-wd-challenge')).toBe('1');
+    expect(await res.json()).toEqual({ error: 'clearance required', challenge: { version: 1, reason: 'missing', recoverable: true } });
   });
 
   it('serves the same request in monitor mode, with the verdict for the origin', async () => {
