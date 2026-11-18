@@ -2,6 +2,10 @@
 // Source: edge/netlify-extension/src/sensor. Rebuild with `npm run build:bundle`.
 // src/sensor/agents.generated.ts
 var AGENTS = [
+  ["hunyuan/", "Hunyuan", "hunyuan", "crawler"],
+  ["speridlabsresearchcrawler", "SperidLabsResearchCrawler", "speridlabsresearchcrawler", "crawler"],
+  ["abliterantbot", "AbliterantBot", "abliterantbot", "crawler"],
+  ["tokenfoundrybot", "TokenFoundryBot", "tokenfoundrybot", "crawler"],
   ["reflectionbot", "Reflectionbot", "reflectionbot", "crawler"],
   ["gptbot", "GPTBot", "gptbot", "crawler"],
   ["claudebot", "ClaudeBot", "claudebot", "crawler"],
@@ -30,6 +34,14 @@ var AGENTS = [
   ["velenpublicwebcrawler", "VelenPublicWebCrawler", "velenpublicwebcrawler", "crawler"],
   ["isscyberriskcrawler", "ISSCyberRiskCrawler", "isscyberriskcrawler", "crawler"],
   ["friendlycrawler", "FriendlyCrawler", "friendlycrawler", "crawler"],
+  ["elevenlabscrawler", "ElevenlabsCrawler", "elevenlabscrawler", "crawler"],
+  ["riverbot", "RiverBot", "riverbot", "crawler"],
+  ["kimibot", "KimiBot", "kimibot", "crawler"],
+  ["moonshotbot", "MoonshotBot", "moonshotbot", "crawler"],
+  ["chatglm-spider", "ChatGLM-Spider", "chatglm-spider", "crawler"],
+  ["talarionsearchbot", "TalarionSearchBot", "talarionsearchbot", "crawler"],
+  ["unfragilebot", "UnfragileBot", "unfragilebot", "crawler"],
+  ["aranet-searchbot", "Aranet-SearchBot", "aranet-searchbot", "crawler"],
   ["duckassistbot", "DuckAssistBot", "duckassistbot", "crawler"],
   ["sofyabot", "SofyaBot", "sofyabot", "crawler"],
   ["xai-searchbot", "xAI-SearchBot", "xai-searchbot", "crawler"],
@@ -40,12 +52,19 @@ var AGENTS = [
   ["searchgpt", "SearchGPT", "searchgpt", "crawler"],
   ["phind", "Phind", "phind", "crawler"],
   ["kagi", "Kagi", "kagi", "crawler"],
-  ["exa.ai", "Exa", "exa", "crawler"],
+  ["exasearchbot", "Exa", "exa", "crawler"],
   ["exabot", "Exa", "exa", "crawler"],
+  ["shapbot", "ShapBot", "shapbot", "crawler"],
+  ["meta-webindexer", "Meta-WebIndexer", "meta-webindexer", "crawler"],
   ["metaphor", "Metaphor", "metaphor", "crawler"],
   ["tavily", "Tavily", "tavily", "crawler"],
   ["bravesearch", "BraveSearch", "brave-search", "crawler"],
   ["neevabot", "NeevaBot", "neeva", "crawler"],
+  ["kimi-searchbot", "Kimi-SearchBot", "kimi-searchbot", "crawler"],
+  ["isonsearchbot", "IsonSearchBot", "isonsearchbot", "crawler"],
+  ["keenablebot", "KeenableBot", "keenablebot", "crawler"],
+  ["azureai-searchbot", "AzureAI-SearchBot", "azureai-searchbot", "crawler"],
+  ["grokbot", "GrokBot", "grokbot", "crawler"],
   ["operator", "Operator", "operator", "crawler"],
   ["claude-user", "Claude-User", "claude-user", "crawler"],
   ["gemini-user", "Gemini-User", "gemini-user", "crawler"],
@@ -55,24 +74,36 @@ var AGENTS = [
   ["buyforme", "AmazonBuyForMe", "amazon-buyforme", "crawler"],
   ["browser-use", "Browser-Use", "browser-use", "crawler"],
   ["stagehand", "Stagehand", "stagehand", "crawler"],
+  ["manus-user", "Manus-User", "manus-user", "crawler"],
   ["multion", "MultiOn", "multion", "crawler"],
+  ["opencode-user", "OpenCode-User", "opencode-user", "crawler"],
+  ["360spider", "360Spider", "360spider", "crawler"],
+  ["cgmsearchbot", "CGMSearchBot", "cgmsearchbot", "crawler"],
   ["iboubot", "IbouBot", "iboubot", "crawler"],
+  ["ibou-search", "IbouBot", "iboubot", "crawler"],
   ["googlebot", "Googlebot", "googlebot", "crawler"],
   ["google-inspectiontool", "Google-InspectionTool", "google-inspectiontool", "crawler"],
   ["bingbot", "Bingbot", "bingbot", "crawler"],
   ["msnbot", "MSNBot", "msnbot", "crawler"],
   ["yandexbot", "YandexBot", "yandexbot", "crawler"],
   ["baiduspider", "Baiduspider", "baiduspider", "crawler"],
+  ["petalbot", "PetalBot", "petalbot", "crawler"],
   ["duckduckbot", "DuckDuckBot", "duckduckbot", "crawler"],
   ["applebot", "Applebot", "applebot", "crawler"],
   ["sogou", "Sogou Spider", "sogou", "crawler"],
   ["qwantify", "Qwantify", "qwantify", "crawler"],
+  ["qwantbot", "Qwantify", "qwantify", "crawler"],
   ["naver", "Naver", "naver", "crawler"],
   ["yeti", "Naver", "naver", "crawler"],
   ["seznambot", "SeznamBot", "seznam", "crawler"],
   ["ecosia", "Ecosia", "ecosia", "crawler"],
   ["mojeekbot", "MojeekBot", "mojeek", "crawler"],
   ["slurp", "Yahoo! Slurp", "yahoo-slurp", "crawler"],
+  ["bravebot", "Bravebot", "bravebot", "crawler"],
+  ["coccocbot", "Coc Coc", "coccocbot", "crawler"],
+  ["yisouspider", "YisouSpider", "yisouspider", "crawler"],
+  ["yepbot", "YepBot", "yepbot", "crawler"],
+  ["crolbot", "CrolBot", "crolbot", "crawler"],
   ["ahrefsbot", "AhrefsBot", "ahrefsbot", "crawler"],
   ["ahrefs", "AhrefsBot", "ahrefsbot", "crawler"],
   ["semrushbot", "SemrushBot", "semrushbot", "crawler"],
@@ -89,6 +120,18 @@ var AGENTS = [
   ["sistrix", "SISTRIX", "sistrix", "crawler"],
   ["serpstat", "Serpstat", "serpstat", "crawler"],
   ["spyfu", "SpyFu", "spyfu", "crawler"],
+  ["meta-externalads", "meta-externalads", "meta-externalads", "crawler"],
+  ["dataforseobot", "DataForSeoBot", "dataforseobot", "crawler"],
+  ["barkrowler", "Barkrowler", "barkrowler", "crawler"],
+  ["scrunchbot", "Scrunchbot", "scrunchbot", "crawler"],
+  ["webxtrendbot", "webXtrendBot", "webxtrendbot", "crawler"],
+  ["serankingbacklinksbot", "SERankingBacklinksBot", "serankingbacklinksbot", "crawler"],
+  ["awariobot", "AwarioBot", "awariobot", "crawler"],
+  ["awariosmartbot", "AwarioBot", "awariobot", "crawler"],
+  ["seojuice-searchbot", "SEOJuice-SearchBot", "seojuice-searchbot", "crawler"],
+  ["trendictionbot", "trendictionbot", "trendictionbot", "crawler"],
+  ["hubspot crawler", "HubSpot Crawler", "hubspot-crawler", "crawler"],
+  ["artex-enrich/", "ARTEX", "artex", "tool"],
   ["nessus", "Nessus", "nessus", "crawler"],
   ["qualys", "Qualys", "qualys", "crawler"],
   ["shodan", "Shodan", "shodan", "crawler"],
@@ -101,7 +144,12 @@ var AGENTS = [
   ["acunetix", "Acunetix", "acunetix", "crawler"],
   ["netsparker", "Netsparker", "netsparker", "crawler"],
   ["detectify", "Detectify", "detectify", "crawler"],
+  ["palo alto networks", "Palo Alto Networks Cortex Xpanse", "paloalto-xpanse", "crawler"],
+  ["recordedfuture", "Recorded Future Crawler", "recordedfuture", "crawler"],
+  ["developers.cloudflare.com/security-center", "Cloudflare Security Center", "cloudflare-security-center", "crawler"],
+  ["virustotalcloud", "VirusTotal", "virustotal-cloud", "crawler"],
   ["intruder", "Intruder", "intruder", "crawler"],
+  ["norma/", "Norma WebFetch", "norma", "tool"],
   ["python-requests", "Python-Requests", "python-requests", "tool"],
   ["python-urllib", "Python-urllib", "python-urllib", "tool"],
   ["python/", "Python", "python", "tool"],
@@ -150,6 +198,12 @@ var AGENTS = [
   ["reddit", "Reddit", "reddit", "crawler"],
   ["embedly", "Embedly", "embedly", "crawler"],
   ["iframely", "Iframely", "iframely", "crawler"],
+  ["adsbot-google", "AdsBot-Google", "adsbot-google", "crawler"],
+  ["stripebot", "Stripebot", "stripebot", "crawler"],
+  ["google-read-aloud", "Google-Read-Aloud", "google-read-aloud", "crawler"],
+  ["google-safety", "Google-Safety", "google-safety", "crawler"],
+  ["oai-adsbot", "OAI-AdsBot", "oai-adsbot", "crawler"],
+  ["kakaobot", "KakaoBot", "kakaobot", "crawler"],
   ["curl/", "cURL", "curl", "tool"],
   ["wget/", "Wget", "wget", "tool"],
   ["libwww-perl", "libwww-perl", "libwww-perl", "tool"],
@@ -170,6 +224,7 @@ var AGENTS = [
   ["chrome-lighthouse", "Lighthouse", "chrome-lighthouse", "crawler"],
   ["google page speed", "Lighthouse", "chrome-lighthouse", "crawler"],
   ["feedly", "Feedly", "feedly", "crawler"],
+  ["livelapbot", "LivelapBot", "livelapbot", "crawler"],
   ["feedfetcher", "Feedfetcher-Google", "feedfetcher-google", "crawler"],
   ["newsblur", "NewsBlur", "newsblur", "crawler"],
   ["inoreader", "Inoreader", "inoreader", "crawler"],
@@ -178,10 +233,18 @@ var AGENTS = [
   ["miniflux", "Miniflux", "miniflux", "crawler"],
   ["freshrss", "FreshRSS", "freshrss", "crawler"],
   ["commafeed", "CommaFeed", "commafeed", "crawler"],
+  ["spiderling", "SpiderLing", "spiderling", "crawler"],
+  ["sketchengine", "SpiderLing", "spiderling", "crawler"],
+  ["netapi/", "NetAPI Bot", "netapi", "crawler"],
+  ["anticlonebot", "AntiCloneBot", "anticlonebot", "crawler"],
+  ["terncrawler", "TernCrawler", "terncrawler", "crawler"],
   ["diffbot", "Diffbot", "diffbot", "crawler"],
   ["import.io", "Import.io", "import-io", "crawler"],
   ["brightdata", "Bright Data", "bright-data", "crawler"],
   ["luminati", "Bright Data", "bright-data", "crawler"],
+  ["brightbot", "Brightbot", "brightbot", "crawler"],
+  ["cloudflarebrowserrenderingcrawler", "Cloudflare Browser Rendering Crawler", "cloudflare-crawl", "crawler"],
+  ["ev-crawler", "ev-crawler", "ev-crawler", "crawler"],
   ["oxylabs", "Oxylabs", "oxylabs", "crawler"],
   ["scrapingbee", "ScrapingBee", "scrapingbee", "crawler"],
   ["scrapingant", "ScrapingAnt", "scrapingant", "crawler"],
@@ -193,11 +256,17 @@ var AGENTS = [
   ["chatgpt-user", "ChatGPT-User", "chatgpt-user", "crawler"],
   ["perplexity-user", "Perplexity-User", "perplexity-user", "crawler"],
   ["mistralai-user", "MistralAI-User", "mistralai-user", "crawler"],
+  ["exauser", "ExaUser", "exauser", "crawler"],
+  ["shap-user", "Shap-User", "shap-user", "crawler"],
   ["meta-externalfetcher", "Meta-ExternalFetcher", "meta-externalfetcher", "crawler"],
   ["gemini-deep-research", "Gemini-Deep-Research", "gemini-deep-research", "crawler"],
   ["copilot", "Microsoft Copilot", "copilot", "crawler"],
   ["cortana", "Cortana", "cortana", "crawler"],
-  ["siri", "Siri", "siri", "crawler"]
+  ["siri", "Siri", "siri", "crawler"],
+  ["kimi-user", "Kimi-User", "kimi-user", "crawler"],
+  ["keenable-user", "Keenable-User", "keenable-user", "crawler"],
+  ["elevenlabsbot", "ElevenlabsBot", "elevenlabsbot", "crawler"],
+  ["klaviyoaibot", "KlaviyoAIBot", "klaviyoaibot", "crawler"]
 ];
 
 // src/sensor/classify.ts
@@ -425,7 +494,7 @@ async function verifyWebBotAuth(request, signedAgents) {
     const key = signedAgents.find((k) => {
       if (k.keyid !== keyid) return false;
       try {
-        return normalizeDirectory(k.directory) === agentDirectory;
+        return agentIdentifier(k.directory) === agentDirectory;
       } catch {
         return false;
       }
@@ -481,20 +550,28 @@ function signatureAgentDirectory(request, m) {
   } else {
     if (component.keyParam === void 0) throw new Error("dictionary member is not covered");
     const member = parseDictionary(trimmed).find((d) => d.key === component.keyParam);
-    const value = member?.items[0]?.value;
-    if (!member || member.isList || member.items.length !== 1 || typeof value !== "string") {
+    const item = member?.items[0];
+    if (!member || member.isList || member.items.length !== 1 || typeof item?.value !== "string") {
       throw new Error("signature-agent member is not a string");
     }
-    uri = value;
+    if (item.hasParams) throw new Error("signature-agent member carries parameters");
+    uri = item.value;
   }
-  return normalizeDirectory(uri);
+  return agentIdentifier(uri);
 }
-function normalizeDirectory(raw) {
+var WELL_KNOWN_DIRECTORY = "/.well-known/http-message-signatures-directory";
+function agentIdentifier(raw) {
+  if (!/^https:\/\/[^/\\]/i.test(raw)) throw new Error("signature-agent must be an https URL");
   const url = new URL(raw);
   if (url.protocol !== "https:" || !url.hostname || url.username || url.password) {
     throw new Error("signature-agent must be an https URL");
   }
-  return `https://${canonicalAuthority(url)}`;
+  url.hash = "";
+  const hasQuery = url.href.includes("?");
+  let path = url.pathname;
+  if (path === "/" && !hasQuery) path = WELL_KNOWN_DIRECTORY;
+  path = path.replace(/%[0-9a-f]{2}/gi, (m) => m.toUpperCase());
+  return `https://${canonicalAuthority(url)}${path}`;
 }
 function buildSignatureBase(request, m) {
   const url = new URL(request.url);
@@ -590,8 +667,8 @@ function parseDictionary(input) {
         entry.isList = true;
         parseInnerList(p, entry);
       } else {
-        const { value, params, bytes } = parseItem(p);
-        entry.items.push({ value, params, ...bytes ? { bytes } : {} });
+        const { value, params, hasParams, bytes } = parseItem(p);
+        entry.items.push({ value, params, hasParams, ...bytes ? { bytes } : {} });
       }
       entry.raw = input.slice(start, p.i);
     } else {
@@ -627,8 +704,9 @@ function parseInnerList(p, entry) {
 }
 function parseItem(p) {
   const { value, bytes } = parseBareItem(p);
+  const hasParams = !p.eof() && p.peek() === ";";
   const params = parseParams(p);
-  return { value, params, bytes };
+  return { value, params, hasParams, bytes };
 }
 function parseParams(p) {
   const params = /* @__PURE__ */ new Map();
@@ -1500,19 +1578,21 @@ function challengePage(apiBase, siteKey) {
   .spin { width: 2rem; height: 2rem; margin: 0 auto 1rem; border: 3px solid #2a2f3a;
           border-top-color: #f90289; border-radius: 50%; animation: r 0.8s linear infinite; }
   @keyframes r { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .spin { animation: none; } }
   p { color: #9aa4b2; font-size: 0.9rem; line-height: 1.5; }
-  .foot { margin-top: 2rem; font-size: 0.75rem; color: #6b7280; }
-  .foot a { color: #9aa4b2; text-decoration: none; }
+  .foot { margin-top: 2rem; font-size: 0.75rem; color: #9aa4b2; }
+  .foot a { color: #c9d1dc; text-decoration: underline; text-underline-offset: 0.15em; }
+  .foot a:focus-visible { outline: 2px solid #f90289; outline-offset: 3px; }
 </style>
 </head>
 <body>
-<div class="box">
+<main class="box" aria-labelledby="challenge-title" aria-describedby="msg">
   <div class="brand"><img src="${CHALLENGE_LOGO_URL}" alt="" width="36" height="36">WebDecoy</div>
-  <div class="spin" id="spin"></div>
-  <h1 style="font-size:1.1rem">Checking your browser</h1>
-  <p id="msg">This takes a moment and happens only once.</p>
+  <div class="spin" id="spin" aria-hidden="true"></div>
+  <h1 id="challenge-title" style="font-size:1.1rem">Checking your browser</h1>
+  <p id="msg" role="status" aria-live="polite" aria-atomic="true">This takes a moment and happens only once.</p>
   <p class="foot">This site is protected by <a href="https://webdecoy.com" rel="noopener">WebDecoy</a>.</p>
-</div>
+</main>
 <script>
 ${DEVICE_FP_JS}
 (async function () {
@@ -2082,7 +2162,7 @@ async function forwardWithVerdict(request, context, verdict) {
 }
 
 // src/sensor/build.ts
-var BUILD = "netlify-9bab77a02087";
+var BUILD = "netlify-53b5dbbfd129";
 
 // src/sensor/entry.ts
 var DEFAULT_INGEST = "https://in.webdecoy.com";

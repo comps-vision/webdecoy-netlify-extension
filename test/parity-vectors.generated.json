@@ -1,5 +1,17 @@
 [
   {
+    "userAgent": "360spider",
+    "id": "360spider",
+    "category": "search_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; 360spider/1.0; +http://example.com/bot)",
+    "id": "360spider",
+    "category": "search_crawler",
+    "matched": true
+  },
+  {
     "userAgent": "ai2bot",
     "id": "ai2bot",
     "category": "training_crawler",
@@ -8,6 +20,30 @@
   {
     "userAgent": "Mozilla/5.0 (compatible; ai2bot/1.0; +http://example.com/bot)",
     "id": "ai2bot",
+    "category": "training_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "artex-enrich/",
+    "id": "artex",
+    "category": "security_scanner",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; artex-enrich//1.0; +http://example.com/bot)",
+    "id": "artex",
+    "category": "security_scanner",
+    "matched": true
+  },
+  {
+    "userAgent": "abliterantbot",
+    "id": "abliterantbot",
+    "category": "training_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; abliterantbot/1.0; +http://example.com/bot)",
+    "id": "abliterantbot",
     "category": "training_crawler",
     "matched": true
   },
@@ -21,6 +57,18 @@
     "userAgent": "Mozilla/5.0 (compatible; acunetix/1.0; +http://example.com/bot)",
     "id": "acunetix",
     "category": "security_scanner",
+    "matched": true
+  },
+  {
+    "userAgent": "adsbot-google",
+    "id": "adsbot-google",
+    "category": "fetcher",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; adsbot-google/1.0; +http://example.com/bot)",
+    "id": "adsbot-google",
+    "category": "fetcher",
     "matched": true
   },
   {
@@ -96,6 +144,18 @@
     "matched": true
   },
   {
+    "userAgent": "anticlonebot",
+    "id": "anticlonebot",
+    "category": "commercial_scraper",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; anticlonebot/1.0; +http://example.com/bot)",
+    "id": "anticlonebot",
+    "category": "commercial_scraper",
+    "matched": true
+  },
+  {
     "userAgent": "apache-httpclient",
     "id": "apache-httpclient",
     "category": "generic_scraper",
@@ -144,6 +204,18 @@
     "matched": true
   },
   {
+    "userAgent": "aranet-searchbot",
+    "id": "aranet-searchbot",
+    "category": "ai_search_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; aranet-searchbot/1.0; +http://example.com/bot)",
+    "id": "aranet-searchbot",
+    "category": "ai_search_crawler",
+    "matched": true
+  },
+  {
     "userAgent": "archive.org_bot",
     "id": "archive-org-bot",
     "category": "archiver",
@@ -153,6 +225,30 @@
     "userAgent": "Mozilla/5.0 (compatible; archive.org_bot/1.0; +http://example.com/bot)",
     "id": "archive-org-bot",
     "category": "archiver",
+    "matched": true
+  },
+  {
+    "userAgent": "awariobot",
+    "id": "awariobot",
+    "category": "seo_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; awariobot/1.0; +http://example.com/bot)",
+    "id": "awariobot",
+    "category": "seo_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "awariosmartbot",
+    "id": "awariobot",
+    "category": "seo_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; awariosmartbot/1.0; +http://example.com/bot)",
+    "id": "awariobot",
+    "category": "seo_crawler",
     "matched": true
   },
   {
@@ -168,6 +264,18 @@
     "matched": true
   },
   {
+    "userAgent": "azureai-searchbot",
+    "id": "azureai-searchbot",
+    "category": "ai_search_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; azureai-searchbot/1.0; +http://example.com/bot)",
+    "id": "azureai-searchbot",
+    "category": "ai_search_crawler",
+    "matched": true
+  },
+  {
     "userAgent": "baiduspider",
     "id": "baiduspider",
     "category": "search_crawler",
@@ -177,6 +285,18 @@
     "userAgent": "Mozilla/5.0 (compatible; baiduspider/1.0; +http://example.com/bot)",
     "id": "baiduspider",
     "category": "search_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "barkrowler",
+    "id": "barkrowler",
+    "category": "seo_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; barkrowler/1.0; +http://example.com/bot)",
+    "id": "barkrowler",
+    "category": "seo_crawler",
     "matched": true
   },
   {
@@ -240,6 +360,18 @@
     "matched": true
   },
   {
+    "userAgent": "bravebot",
+    "id": "bravebot",
+    "category": "search_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; bravebot/1.0; +http://example.com/bot)",
+    "id": "bravebot",
+    "category": "search_crawler",
+    "matched": true
+  },
+  {
     "userAgent": "brightdata",
     "id": "bright-data",
     "category": "commercial_scraper",
@@ -260,6 +392,18 @@
   {
     "userAgent": "Mozilla/5.0 (compatible; luminati/1.0; +http://example.com/bot)",
     "id": "bright-data",
+    "category": "commercial_scraper",
+    "matched": true
+  },
+  {
+    "userAgent": "brightbot",
+    "id": "brightbot",
+    "category": "commercial_scraper",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; brightbot/1.0; +http://example.com/bot)",
+    "id": "brightbot",
     "category": "commercial_scraper",
     "matched": true
   },
@@ -348,6 +492,18 @@
     "matched": true
   },
   {
+    "userAgent": "cgmsearchbot",
+    "id": "cgmsearchbot",
+    "category": "search_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; cgmsearchbot/1.0; +http://example.com/bot)",
+    "id": "cgmsearchbot",
+    "category": "search_crawler",
+    "matched": true
+  },
+  {
     "userAgent": "censys",
     "id": "censys",
     "category": "security_scanner",
@@ -357,6 +513,18 @@
     "userAgent": "Mozilla/5.0 (compatible; censys/1.0; +http://example.com/bot)",
     "id": "censys",
     "category": "security_scanner",
+    "matched": true
+  },
+  {
+    "userAgent": "chatglm-spider",
+    "id": "chatglm-spider",
+    "category": "training_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; chatglm-spider/1.0; +http://example.com/bot)",
+    "id": "chatglm-spider",
+    "category": "training_crawler",
     "matched": true
   },
   {
@@ -417,6 +585,42 @@
     "userAgent": "Mozilla/5.0 (compatible; claudebot/1.0; +http://example.com/bot)",
     "id": "claudebot",
     "category": "training_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "cloudflarebrowserrenderingcrawler",
+    "id": "cloudflare-crawl",
+    "category": "commercial_scraper",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; cloudflarebrowserrenderingcrawler/1.0; +http://example.com/bot)",
+    "id": "cloudflare-crawl",
+    "category": "commercial_scraper",
+    "matched": true
+  },
+  {
+    "userAgent": "developers.cloudflare.com/security-center",
+    "id": "cloudflare-security-center",
+    "category": "security_scanner",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; developers.cloudflare.com/security-center/1.0; +http://example.com/bot)",
+    "id": "cloudflare-security-center",
+    "category": "security_scanner",
+    "matched": true
+  },
+  {
+    "userAgent": "coccocbot",
+    "id": "coccocbot",
+    "category": "search_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; coccocbot/1.0; +http://example.com/bot)",
+    "id": "coccocbot",
+    "category": "search_crawler",
     "matched": true
   },
   {
@@ -501,6 +705,30 @@
     "userAgent": "Mozilla/5.0 (compatible; crawlbase/1.0; +http://example.com/bot)",
     "id": "crawlbase",
     "category": "commercial_scraper",
+    "matched": true
+  },
+  {
+    "userAgent": "crolbot",
+    "id": "crolbot",
+    "category": "seo_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; crolbot/1.0; +http://example.com/bot)",
+    "id": "crolbot",
+    "category": "seo_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "dataforseobot",
+    "id": "dataforseobot",
+    "category": "seo_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; dataforseobot/1.0; +http://example.com/bot)",
+    "id": "dataforseobot",
+    "category": "seo_crawler",
     "matched": true
   },
   {
@@ -624,6 +852,30 @@
     "matched": true
   },
   {
+    "userAgent": "elevenlabsbot",
+    "id": "elevenlabsbot",
+    "category": "ai_assistant",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; elevenlabsbot/1.0; +http://example.com/bot)",
+    "id": "elevenlabsbot",
+    "category": "ai_assistant",
+    "matched": true
+  },
+  {
+    "userAgent": "elevenlabscrawler",
+    "id": "elevenlabscrawler",
+    "category": "training_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; elevenlabscrawler/1.0; +http://example.com/bot)",
+    "id": "elevenlabscrawler",
+    "category": "training_crawler",
+    "matched": true
+  },
+  {
     "userAgent": "embedly",
     "id": "embedly",
     "category": "fetcher",
@@ -636,13 +888,13 @@
     "matched": true
   },
   {
-    "userAgent": "exa.ai",
+    "userAgent": "exasearchbot",
     "id": "exa",
     "category": "ai_search_crawler",
     "matched": true
   },
   {
-    "userAgent": "Mozilla/5.0 (compatible; exa.ai/1.0; +http://example.com/bot)",
+    "userAgent": "Mozilla/5.0 (compatible; exasearchbot/1.0; +http://example.com/bot)",
     "id": "exa",
     "category": "ai_search_crawler",
     "matched": true
@@ -657,6 +909,18 @@
     "userAgent": "Mozilla/5.0 (compatible; exabot/1.0; +http://example.com/bot)",
     "id": "exa",
     "category": "ai_search_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "exauser",
+    "id": "exauser",
+    "category": "ai_assistant",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; exauser/1.0; +http://example.com/bot)",
+    "id": "exauser",
+    "category": "ai_assistant",
     "matched": true
   },
   {
@@ -876,6 +1140,30 @@
     "matched": true
   },
   {
+    "userAgent": "google-read-aloud",
+    "id": "google-read-aloud",
+    "category": "fetcher",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; google-read-aloud/1.0; +http://example.com/bot)",
+    "id": "google-read-aloud",
+    "category": "fetcher",
+    "matched": true
+  },
+  {
+    "userAgent": "google-safety",
+    "id": "google-safety",
+    "category": "fetcher",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; google-safety/1.0; +http://example.com/bot)",
+    "id": "google-safety",
+    "category": "fetcher",
+    "matched": true
+  },
+  {
     "userAgent": "googleagent-mariner",
     "id": "googleagent-mariner",
     "category": "ai_agent",
@@ -921,6 +1209,18 @@
     "userAgent": "Mozilla/5.0 (compatible; got//1.0; +http://example.com/bot)",
     "id": "got",
     "category": "generic_scraper",
+    "matched": true
+  },
+  {
+    "userAgent": "grokbot",
+    "id": "grokbot",
+    "category": "ai_search_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; grokbot/1.0; +http://example.com/bot)",
+    "id": "grokbot",
+    "category": "ai_search_crawler",
     "matched": true
   },
   {
@@ -996,6 +1296,30 @@
     "matched": true
   },
   {
+    "userAgent": "hubspot crawler",
+    "id": "hubspot-crawler",
+    "category": "seo_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; hubspot crawler/1.0; +http://example.com/bot)",
+    "id": "hubspot-crawler",
+    "category": "seo_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "hunyuan/",
+    "id": "hunyuan",
+    "category": "training_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; hunyuan//1.0; +http://example.com/bot)",
+    "id": "hunyuan",
+    "category": "training_crawler",
+    "matched": true
+  },
+  {
     "userAgent": "isscyberriskcrawler",
     "id": "isscyberriskcrawler",
     "category": "training_crawler",
@@ -1015,6 +1339,18 @@
   },
   {
     "userAgent": "Mozilla/5.0 (compatible; iboubot/1.0; +http://example.com/bot)",
+    "id": "iboubot",
+    "category": "search_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "ibou-search",
+    "id": "iboubot",
+    "category": "search_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; ibou-search/1.0; +http://example.com/bot)",
     "id": "iboubot",
     "category": "search_crawler",
     "matched": true
@@ -1080,6 +1416,18 @@
     "matched": true
   },
   {
+    "userAgent": "isonsearchbot",
+    "id": "isonsearchbot",
+    "category": "ai_search_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; isonsearchbot/1.0; +http://example.com/bot)",
+    "id": "isonsearchbot",
+    "category": "ai_search_crawler",
+    "matched": true
+  },
+  {
     "userAgent": "java/",
     "id": "java",
     "category": "generic_scraper",
@@ -1113,6 +1461,90 @@
     "userAgent": "Mozilla/5.0 (compatible; kagi/1.0; +http://example.com/bot)",
     "id": "kagi",
     "category": "ai_search_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "kakaobot",
+    "id": "kakaobot",
+    "category": "fetcher",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; kakaobot/1.0; +http://example.com/bot)",
+    "id": "kakaobot",
+    "category": "fetcher",
+    "matched": true
+  },
+  {
+    "userAgent": "keenable-user",
+    "id": "keenable-user",
+    "category": "ai_assistant",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; keenable-user/1.0; +http://example.com/bot)",
+    "id": "keenable-user",
+    "category": "ai_assistant",
+    "matched": true
+  },
+  {
+    "userAgent": "keenablebot",
+    "id": "keenablebot",
+    "category": "ai_search_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; keenablebot/1.0; +http://example.com/bot)",
+    "id": "keenablebot",
+    "category": "ai_search_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "kimi-searchbot",
+    "id": "kimi-searchbot",
+    "category": "ai_search_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; kimi-searchbot/1.0; +http://example.com/bot)",
+    "id": "kimi-searchbot",
+    "category": "ai_search_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "kimi-user",
+    "id": "kimi-user",
+    "category": "ai_assistant",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; kimi-user/1.0; +http://example.com/bot)",
+    "id": "kimi-user",
+    "category": "ai_assistant",
+    "matched": true
+  },
+  {
+    "userAgent": "kimibot",
+    "id": "kimibot",
+    "category": "training_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; kimibot/1.0; +http://example.com/bot)",
+    "id": "kimibot",
+    "category": "training_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "klaviyoaibot",
+    "id": "klaviyoaibot",
+    "category": "ai_assistant",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; klaviyoaibot/1.0; +http://example.com/bot)",
+    "id": "klaviyoaibot",
+    "category": "ai_assistant",
     "matched": true
   },
   {
@@ -1176,6 +1608,18 @@
     "matched": true
   },
   {
+    "userAgent": "livelapbot",
+    "id": "livelapbot",
+    "category": "feed_reader",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; livelapbot/1.0; +http://example.com/bot)",
+    "id": "livelapbot",
+    "category": "feed_reader",
+    "matched": true
+  },
+  {
     "userAgent": "mj12bot",
     "id": "mj12bot",
     "category": "seo_crawler",
@@ -1197,6 +1641,18 @@
     "userAgent": "Mozilla/5.0 (compatible; msnbot/1.0; +http://example.com/bot)",
     "id": "msnbot",
     "category": "search_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "manus-user",
+    "id": "manus-user",
+    "category": "ai_agent",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; manus-user/1.0; +http://example.com/bot)",
+    "id": "manus-user",
+    "category": "ai_agent",
     "matched": true
   },
   {
@@ -1233,6 +1689,18 @@
     "userAgent": "Mozilla/5.0 (compatible; meta-externalfetcher/1.0; +http://example.com/bot)",
     "id": "meta-externalfetcher",
     "category": "ai_assistant",
+    "matched": true
+  },
+  {
+    "userAgent": "meta-webindexer",
+    "id": "meta-webindexer",
+    "category": "ai_search_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; meta-webindexer/1.0; +http://example.com/bot)",
+    "id": "meta-webindexer",
+    "category": "ai_search_crawler",
     "matched": true
   },
   {
@@ -1308,6 +1776,18 @@
     "matched": true
   },
   {
+    "userAgent": "moonshotbot",
+    "id": "moonshotbot",
+    "category": "training_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; moonshotbot/1.0; +http://example.com/bot)",
+    "id": "moonshotbot",
+    "category": "training_crawler",
+    "matched": true
+  },
+  {
     "userAgent": "multion",
     "id": "multion",
     "category": "ai_agent",
@@ -1365,6 +1845,18 @@
     "userAgent": "Mozilla/5.0 (compatible; nessus/1.0; +http://example.com/bot)",
     "id": "nessus",
     "category": "security_scanner",
+    "matched": true
+  },
+  {
+    "userAgent": "netapi/",
+    "id": "netapi",
+    "category": "commercial_scraper",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; netapi//1.0; +http://example.com/bot)",
+    "id": "netapi",
+    "category": "commercial_scraper",
     "matched": true
   },
   {
@@ -1440,6 +1932,18 @@
     "matched": true
   },
   {
+    "userAgent": "norma/",
+    "id": "norma",
+    "category": "generic_scraper",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; norma//1.0; +http://example.com/bot)",
+    "id": "norma",
+    "category": "generic_scraper",
+    "matched": true
+  },
+  {
     "userAgent": "nuclei",
     "id": "nuclei",
     "category": "security_scanner",
@@ -1449,6 +1953,18 @@
     "userAgent": "Mozilla/5.0 (compatible; nuclei/1.0; +http://example.com/bot)",
     "id": "nuclei",
     "category": "security_scanner",
+    "matched": true
+  },
+  {
+    "userAgent": "oai-adsbot",
+    "id": "oai-adsbot",
+    "category": "fetcher",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; oai-adsbot/1.0; +http://example.com/bot)",
+    "id": "oai-adsbot",
+    "category": "fetcher",
     "matched": true
   },
   {
@@ -1512,6 +2028,18 @@
     "matched": true
   },
   {
+    "userAgent": "opencode-user",
+    "id": "opencode-user",
+    "category": "ai_agent",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; opencode-user/1.0; +http://example.com/bot)",
+    "id": "opencode-user",
+    "category": "ai_agent",
+    "matched": true
+  },
+  {
     "userAgent": "operator",
     "id": "operator",
     "category": "ai_agent",
@@ -1548,6 +2076,18 @@
     "matched": true
   },
   {
+    "userAgent": "palo alto networks",
+    "id": "paloalto-xpanse",
+    "category": "security_scanner",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; palo alto networks/1.0; +http://example.com/bot)",
+    "id": "paloalto-xpanse",
+    "category": "security_scanner",
+    "matched": true
+  },
+  {
     "userAgent": "perplexity-user",
     "id": "perplexity-user",
     "category": "ai_assistant",
@@ -1569,6 +2109,18 @@
     "userAgent": "Mozilla/5.0 (compatible; perplexitybot/1.0; +http://example.com/bot)",
     "id": "perplexitybot",
     "category": "ai_search_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "petalbot",
+    "id": "petalbot",
+    "category": "search_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; petalbot/1.0; +http://example.com/bot)",
+    "id": "petalbot",
+    "category": "search_crawler",
     "matched": true
   },
   {
@@ -1704,6 +2256,18 @@
     "matched": true
   },
   {
+    "userAgent": "qwantbot",
+    "id": "qwantify",
+    "category": "search_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; qwantbot/1.0; +http://example.com/bot)",
+    "id": "qwantify",
+    "category": "search_crawler",
+    "matched": true
+  },
+  {
     "userAgent": "qwen",
     "id": "qwen",
     "category": "training_crawler",
@@ -1713,6 +2277,18 @@
     "userAgent": "Mozilla/5.0 (compatible; qwen/1.0; +http://example.com/bot)",
     "id": "qwen",
     "category": "training_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "recordedfuture",
+    "id": "recordedfuture",
+    "category": "security_scanner",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; recordedfuture/1.0; +http://example.com/bot)",
+    "id": "recordedfuture",
+    "category": "security_scanner",
     "matched": true
   },
   {
@@ -1740,6 +2316,18 @@
     "matched": true
   },
   {
+    "userAgent": "riverbot",
+    "id": "riverbot",
+    "category": "training_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; riverbot/1.0; +http://example.com/bot)",
+    "id": "riverbot",
+    "category": "training_crawler",
+    "matched": true
+  },
+  {
     "userAgent": "rogerbot",
     "id": "rogerbot",
     "category": "seo_crawler",
@@ -1761,6 +2349,30 @@
     "userAgent": "Mozilla/5.0 (compatible; ruby/1.0; +http://example.com/bot)",
     "id": "ruby",
     "category": "generic_scraper",
+    "matched": true
+  },
+  {
+    "userAgent": "seojuice-searchbot",
+    "id": "seojuice-searchbot",
+    "category": "seo_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; seojuice-searchbot/1.0; +http://example.com/bot)",
+    "id": "seojuice-searchbot",
+    "category": "seo_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "serankingbacklinksbot",
+    "id": "serankingbacklinksbot",
+    "category": "seo_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; serankingbacklinksbot/1.0; +http://example.com/bot)",
+    "id": "serankingbacklinksbot",
+    "category": "seo_crawler",
     "matched": true
   },
   {
@@ -1820,6 +2432,18 @@
   {
     "userAgent": "Mozilla/5.0 (compatible; screaming frog/1.0; +http://example.com/bot)",
     "id": "screaming-frog",
+    "category": "seo_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "scrunchbot",
+    "id": "scrunchbot",
+    "category": "seo_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; scrunchbot/1.0; +http://example.com/bot)",
+    "id": "scrunchbot",
     "category": "seo_crawler",
     "matched": true
   },
@@ -1908,6 +2532,30 @@
     "matched": true
   },
   {
+    "userAgent": "shap-user",
+    "id": "shap-user",
+    "category": "ai_assistant",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; shap-user/1.0; +http://example.com/bot)",
+    "id": "shap-user",
+    "category": "ai_assistant",
+    "matched": true
+  },
+  {
+    "userAgent": "shapbot",
+    "id": "shapbot",
+    "category": "ai_search_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; shapbot/1.0; +http://example.com/bot)",
+    "id": "shapbot",
+    "category": "ai_search_crawler",
+    "matched": true
+  },
+  {
     "userAgent": "shodan",
     "id": "shodan",
     "category": "security_scanner",
@@ -1992,6 +2640,42 @@
     "matched": true
   },
   {
+    "userAgent": "speridlabsresearchcrawler",
+    "id": "speridlabsresearchcrawler",
+    "category": "training_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; speridlabsresearchcrawler/1.0; +http://example.com/bot)",
+    "id": "speridlabsresearchcrawler",
+    "category": "training_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "spiderling",
+    "id": "spiderling",
+    "category": "commercial_scraper",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; spiderling/1.0; +http://example.com/bot)",
+    "id": "spiderling",
+    "category": "commercial_scraper",
+    "matched": true
+  },
+  {
+    "userAgent": "sketchengine",
+    "id": "spiderling",
+    "category": "commercial_scraper",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; sketchengine/1.0; +http://example.com/bot)",
+    "id": "spiderling",
+    "category": "commercial_scraper",
+    "matched": true
+  },
+  {
     "userAgent": "splash",
     "id": "splash",
     "category": "headless_browser",
@@ -2040,6 +2724,30 @@
     "matched": true
   },
   {
+    "userAgent": "stripebot",
+    "id": "stripebot",
+    "category": "fetcher",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; stripebot/1.0; +http://example.com/bot)",
+    "id": "stripebot",
+    "category": "fetcher",
+    "matched": true
+  },
+  {
+    "userAgent": "talarionsearchbot",
+    "id": "talarionsearchbot",
+    "category": "ai_search_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; talarionsearchbot/1.0; +http://example.com/bot)",
+    "id": "talarionsearchbot",
+    "category": "ai_search_crawler",
+    "matched": true
+  },
+  {
     "userAgent": "tavily",
     "id": "tavily",
     "category": "ai_search_crawler",
@@ -2064,6 +2772,18 @@
     "matched": true
   },
   {
+    "userAgent": "terncrawler",
+    "id": "terncrawler",
+    "category": "commercial_scraper",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; terncrawler/1.0; +http://example.com/bot)",
+    "id": "terncrawler",
+    "category": "commercial_scraper",
+    "matched": true
+  },
+  {
     "userAgent": "theoldreader",
     "id": "theoldreader",
     "category": "feed_reader",
@@ -2084,6 +2804,18 @@
   {
     "userAgent": "Mozilla/5.0 (compatible; timpibot/1.0; +http://example.com/bot)",
     "id": "timpibot",
+    "category": "training_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "tokenfoundrybot",
+    "id": "tokenfoundrybot",
+    "category": "training_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; tokenfoundrybot/1.0; +http://example.com/bot)",
+    "id": "tokenfoundrybot",
     "category": "training_crawler",
     "matched": true
   },
@@ -2124,6 +2856,18 @@
     "matched": true
   },
   {
+    "userAgent": "unfragilebot",
+    "id": "unfragilebot",
+    "category": "ai_search_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; unfragilebot/1.0; +http://example.com/bot)",
+    "id": "unfragilebot",
+    "category": "ai_search_crawler",
+    "matched": true
+  },
+  {
     "userAgent": "uptimerobot",
     "id": "uptimerobot",
     "category": "monitoring",
@@ -2145,6 +2889,18 @@
     "userAgent": "Mozilla/5.0 (compatible; velenpublicwebcrawler/1.0; +http://example.com/bot)",
     "id": "velenpublicwebcrawler",
     "category": "training_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "virustotalcloud",
+    "id": "virustotal-cloud",
+    "category": "security_scanner",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; virustotalcloud/1.0; +http://example.com/bot)",
+    "id": "virustotal-cloud",
+    "category": "security_scanner",
     "matched": true
   },
   {
@@ -2244,6 +3000,30 @@
     "matched": true
   },
   {
+    "userAgent": "yepbot",
+    "id": "yepbot",
+    "category": "search_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; yepbot/1.0; +http://example.com/bot)",
+    "id": "yepbot",
+    "category": "search_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "yisouspider",
+    "id": "yisouspider",
+    "category": "search_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; yisouspider/1.0; +http://example.com/bot)",
+    "id": "yisouspider",
+    "category": "search_crawler",
+    "matched": true
+  },
+  {
     "userAgent": "youbot",
     "id": "youbot",
     "category": "training_crawler",
@@ -2304,6 +3084,18 @@
     "matched": true
   },
   {
+    "userAgent": "ev-crawler",
+    "id": "ev-crawler",
+    "category": "commercial_scraper",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; ev-crawler/1.0; +http://example.com/bot)",
+    "id": "ev-crawler",
+    "category": "commercial_scraper",
+    "matched": true
+  },
+  {
     "userAgent": "img2dataset",
     "id": "img2dataset",
     "category": "training_crawler",
@@ -2328,6 +3120,18 @@
     "matched": true
   },
   {
+    "userAgent": "meta-externalads",
+    "id": "meta-externalads",
+    "category": "seo_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; meta-externalads/1.0; +http://example.com/bot)",
+    "id": "meta-externalads",
+    "category": "seo_crawler",
+    "matched": true
+  },
+  {
     "userAgent": "node-fetch",
     "id": "node-fetch",
     "category": "generic_scraper",
@@ -2337,6 +3141,30 @@
     "userAgent": "Mozilla/5.0 (compatible; node-fetch/1.0; +http://example.com/bot)",
     "id": "node-fetch",
     "category": "generic_scraper",
+    "matched": true
+  },
+  {
+    "userAgent": "trendictionbot",
+    "id": "trendictionbot",
+    "category": "seo_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; trendictionbot/1.0; +http://example.com/bot)",
+    "id": "trendictionbot",
+    "category": "seo_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "webxtrendbot",
+    "id": "webxtrendbot",
+    "category": "seo_crawler",
+    "matched": true
+  },
+  {
+    "userAgent": "Mozilla/5.0 (compatible; webxtrendbot/1.0; +http://example.com/bot)",
+    "id": "webxtrendbot",
+    "category": "seo_crawler",
     "matched": true
   },
   {
